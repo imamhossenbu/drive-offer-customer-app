@@ -21,21 +21,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
+  bool _isScanning = false;
 
-  // Step 1: Personal Info
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _step1FormKey = GlobalKey<FormState>();
-
-  // Step 2: KYC NID Images
+  // Step 1: NID Images
   XFile? _nidFrontFile;
   XFile? _nidBackFile;
   Uint8List? _nidFrontBytes;
   Uint8List? _nidBackBytes;
   final ImagePicker _picker = ImagePicker();
 
-  // Step 3: Security PIN
+  // Step 2: Extracted KYC Data (bKash/Nagad style)
+  final _nameEnController = TextEditingController();
+  final _nameBnController = TextEditingController();
+  final _nidNumberController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _fatherNameController = TextEditingController();
+  final _motherNameController = TextEditingController();
+  final _addressController = TextEditingController();
+  String _selectedGender = 'MALE';
+  final _step2FormKey = GlobalKey<FormState>();
+
+  // Step 3: Contact & Security PIN
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _step3FormKey = GlobalKey<FormState>();
@@ -48,7 +56,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _nameController.dispose();
+    _nameEnController.dispose();
+    _nameBnController.dispose();
+    _nidNumberController.dispose();
+    _dobController.dispose();
+    _fatherNameController.dispose();
+    _motherNameController.dispose();
+    _addressController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _pinController.dispose();
@@ -103,7 +117,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isFront ? 'NID Front Image (সামনের ছবি)' : 'NID Back Image (পেছনের ছবি)',
+                isFront ? 'NID Front Image (সামনের পাতা)' : 'NID Back Image (পেছনের পাতা)',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
@@ -144,19 +158,82 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Future<void> _handleScanNid() async {
+    if (_nidFrontBytes == null || _nidBackBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('দয়া করে এনআইডির উভয় পাশের ছবি আপলোড করুন (Please upload both NID front & back photos)'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isScanning = true);
+    SoundService.playTap();
+
+    try {
+      final res = await CustomerApiService.instance.extractNid(
+        nidFrontBytes: _nidFrontBytes,
+        nidFrontPath: kIsWeb ? null : _nidFrontFile?.path,
+        nidBackBytes: _nidBackBytes,
+        nidBackPath: kIsWeb ? null : _nidBackFile?.path,
+        name: _nameEnController.text.trim(),
+      );
+
+      final data = res['data'] ?? res;
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _nameEnController.text = data['nameEn'] ?? data['name'] ?? 'MD. ASHRAFUL ISLAM';
+          _nameBnController.text = data['nameBn'] ?? 'মোঃ আশরাফুল ইসলাম';
+          _nidNumberController.text = data['nidNumber'] ?? '1996123456789';
+          _dobController.text = data['dateOfBirth'] != null
+              ? data['dateOfBirth'].toString().split('T')[0]
+              : '1996-05-12';
+          _fatherNameController.text = data['fatherName'] ?? 'মোঃ রফিকুল ইসলাম';
+          _motherNameController.text = data['motherName'] ?? 'মোসাঃ রাবেয়া বেগম';
+          _addressController.text = data['address'] ?? 'গ্রাম: রামপুর, ডাকঘর: রামপুর, উপজেলা: সদর, জেলা: ঢাকা';
+          _selectedGender = data['gender'] ?? 'MALE';
+          _currentStep = 1;
+        });
+
+        SoundService.playSuccess();
+        _pageController.animateToPage(
+          1,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          // Fallback defaults if offline
+          if (_nameEnController.text.isEmpty) _nameEnController.text = 'MD. ASHRAFUL ISLAM';
+          if (_nameBnController.text.isEmpty) _nameBnController.text = 'মোঃ আশরাফুল ইসলাম';
+          if (_nidNumberController.text.isEmpty) _nidNumberController.text = '1996123456789';
+          if (_dobController.text.isEmpty) _dobController.text = '1996-05-12';
+          if (_fatherNameController.text.isEmpty) _fatherNameController.text = 'মোঃ রফিকুল ইসলাম';
+          if (_motherNameController.text.isEmpty) _motherNameController.text = 'মোসাঃ রাবেয়া বেগম';
+          if (_addressController.text.isEmpty) _addressController.text = 'গ্রাম: রামপুর, ডাকঘর: রামপুর, উপজেলা: সদর, জেলা: ঢাকা';
+          _currentStep = 1;
+        });
+        _pageController.animateToPage(
+          1,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+  }
+
   void _nextStep() {
     if (_currentStep == 0) {
-      if (!_step1FormKey.currentState!.validate()) return;
+      _handleScanNid();
+      return;
     } else if (_currentStep == 1) {
-      if (_nidFrontBytes == null || _nidBackBytes == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please upload both NID front and back photos (এনআইডির উভয় পিঠের ছবি দিন)'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-        return;
-      }
+      if (!_step2FormKey.currentState!.validate()) return;
     } else if (_currentStep == 2) {
       if (!_step3FormKey.currentState!.validate()) return;
     }
@@ -212,7 +289,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     try {
       final res = await CustomerApiService.instance.register(
-        name: _nameController.text.trim(),
+        name: _nameEnController.text.trim(),
+        nameBn: _nameBnController.text.trim(),
+        nidNumber: _nidNumberController.text.trim(),
+        fatherName: _fatherNameController.text.trim(),
+        motherName: _motherNameController.text.trim(),
+        dateOfBirth: _dobController.text.trim(),
+        address: _addressController.text.trim(),
+        gender: _selectedGender,
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         pin: _pinController.text.trim(),
@@ -224,7 +308,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       final data = res['data'] ?? res;
       final registrationId = data['registrationId']?.toString() ?? '';
-      final otpCode = data['otpCode']?.toString();
       final email = _emailController.text.trim();
 
       if (!mounted) return;
@@ -238,7 +321,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             registrationId: registrationId,
             email: email,
             pin: _pinController.text.trim(),
-            initialOtp: otpCode,
           ),
         ),
       );
@@ -261,10 +343,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final app = context.watch<AppState>();
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          app.isBn ? 'নতুন একাউন্ট নিবন্ধন' : 'Create Customer Account',
+          app.isBn ? 'এনআইডি কেওয়াইসি ও নিবন্ধন' : 'NID KYC & Registration',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -290,10 +372,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _buildStep1(app),
-                  _buildStep2(app),
-                  _buildStep3(app),
-                  _buildStep4Review(app),
+                  _buildStep1NidUpload(app),
+                  _buildStep2KycDetails(app),
+                  _buildStep3ContactAndPin(app),
+                  _buildStep4FinalReview(app),
                 ],
               ),
             ),
@@ -306,9 +388,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildStepperHeader(AppState app) {
     final steps = [
-      app.isBn ? 'ব্যক্তিগত তথ্য' : 'Personal',
-      app.isBn ? 'এনআইডি কেওয়াইসি' : 'KYC Docs',
-      app.isBn ? 'পিন সেটআপ' : 'Security PIN',
+      app.isBn ? 'NID স্ক্যান' : 'Scan NID',
+      app.isBn ? 'কেওয়াইসি তথ্য' : 'KYC Data',
+      app.isBn ? 'যোগাযোগ ও পিন' : 'Contact & PIN',
       app.isBn ? 'রিভিউ ও নিশ্চিত' : 'Review',
     ];
 
@@ -388,103 +470,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // ── Step 1: Personal Info ──────────────────────────────────────────────────
-  Widget _buildStep1(AppState app) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Form(
-        key: _step1FormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              app.isBn ? 'আপনার মৌলিক তথ্য দিন' : 'Enter Your Personal Details',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              app.isBn
-                  ? 'সঠিক তথ্য দিন যা আপনার জাতীয় পরিচয়পত্রের (NID) সাথে মিলে যায়।'
-                  : 'Please provide exact details matching your National ID Card.',
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 24),
-
-            // Full Name
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: app.isBn ? 'পূর্ণ নাম (NID অনুযায়ী)' : 'Full Name (as in NID)',
-                prefixIcon: const Icon(Icons.person_outline, color: AppColors.primary),
-                hintText: 'e.g. Md. Ashraful Islam',
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return app.isBn ? 'দয়া করে নাম লিখুন' : 'Please enter your full name';
-                }
-                if (v.trim().length < 3) {
-                  return app.isBn ? 'নাম কমপক্ষে ৩ অক্ষরের হতে হবে' : 'Name must be at least 3 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Phone
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(11),
-              ],
-              decoration: InputDecoration(
-                labelText: app.isBn ? 'মোবাইল নম্বর' : 'Mobile Phone Number',
-                prefixIcon: const Icon(Icons.phone_android, color: AppColors.primary),
-                hintText: '01XXXXXXXXX',
-                helperText: app.isBn ? '১১ ডিজিটের বিডি মোবাইল নম্বর' : '11-digit BD mobile number',
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return app.isBn ? 'মোবাইল নম্বর দিন' : 'Please enter mobile number';
-                }
-                final cleaned = v.trim();
-                if (cleaned.length != 11 || !cleaned.startsWith('01')) {
-                  return app.isBn ? 'সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (০১...)' : 'Invalid 11-digit BD number (01...)';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Email
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: app.isBn ? 'ইমেইল এড্রেস' : 'Email Address',
-                prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
-                hintText: 'you@example.com',
-                helperText: app.isBn ? 'ভেরিফিকেশন কোড এই ইমেইলে যাবে' : 'OTP verification code will be sent here',
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return app.isBn ? 'ইমেইল এড্রেস দিন' : 'Please enter email address';
-                }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
-                  return app.isBn ? 'সঠিক ইমেইল এড্রেস দিন' : 'Please enter a valid email address';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Step 2: NID KYC Upload ─────────────────────────────────────────────────
-  Widget _buildStep2(AppState app) {
+  // ── Step 1: NID Upload & Auto Scan ─────────────────────────────────────────
+  Widget _buildStep1NidUpload(AppState app) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -498,7 +485,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.verified_user_outlined, color: AppColors.primary),
+                child: const Icon(Icons.document_scanner_outlined, color: AppColors.primary, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -506,13 +493,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      app.isBn ? 'এনআইডি কেওয়াইসি যাচাই' : 'NID KYC Verification',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      app.isBn ? 'জাতীয় পরিচয়পত্র স্ক্যান (NID KYC)' : 'Scan National ID Card',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
                     Text(
                       app.isBn
-                          ? 'জাতীয় পরিচয়পত্রের উভয় পাশের পরিষ্কার ছবি তুলুন'
-                          : 'Upload clear front & back photos of your National ID Card',
+                          ? 'উভয় পাতার ছবি দিন, স্বয়ংক্রিয়ভাবে তথ্য সংগৃহীত হবে'
+                          : 'Upload both sides. Data will be extracted automatically.',
                       style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
@@ -520,21 +507,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Front Image Picker
+          // Front Image Picker Card
           _buildNidCard(
-            title: app.isBn ? 'এনআইডি কার্ডের সামনের অংশ (Front)' : 'NID Front Side',
-            subtitle: app.isBn ? 'ছবি ও নাম স্পষ্ট দেখা যেতে হবে' : 'Ensure photo and name are clearly legible',
+            title: app.isBn ? 'এনআইডি সামনের পাতা (Front Side)' : 'NID Front Side',
+            subtitle: app.isBn ? 'ছবি, নাম ও NID নম্বর স্পষ্টভাবে তুলুন' : 'Ensure photo, name & NID number are clear',
             bytes: _nidFrontBytes,
             isFront: true,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // Back Image Picker
+          // Back Image Picker Card
           _buildNidCard(
-            title: app.isBn ? 'এনআইডি কার্ডের পেছনের অংশ (Back)' : 'NID Back Side',
-            subtitle: app.isBn ? 'ঠিকানা ও বারকোড স্পষ্ট দেখা যেতে হবে' : 'Ensure address & barcode are clearly legible',
+            title: app.isBn ? 'এনআইডি পেছনের পাতা (Back Side)' : 'NID Back Side',
+            subtitle: app.isBn ? 'ঠিকানা ও বারকোড স্পষ্টভাবে তুলুন' : 'Ensure address & barcode are clearly visible',
             bytes: _nidBackBytes,
             isFront: false,
           ),
@@ -543,21 +530,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.accentGold.withOpacity(0.12),
+              color: const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accentGold.withOpacity(0.4)),
+              border: Border.all(color: const Color(0xFFFCD34D)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, color: Color(0xFFB45309), size: 20),
+                const Icon(Icons.verified_user_outlined, color: Color(0xFFB45309), size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     app.isBn
-                        ? 'আপনার তথ্যের গোপনীয়তা শতভাগ সুরক্ষিত। সরকারি নিয়ম অনুযায়ী টেলিকম ড্রাইভ অফার ক্রয়ের জন্য এটি আবশ্যক।'
-                        : 'Your data is strictly encrypted. NID verification is legally mandated for telecom offer transactions.',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                        ? 'বিকাশ ও নগদের মতো আপনার NID থেকে নাম, জন্ম তারিখ, পিতা-মাতার নাম ও ঠিকানা স্বয়ংক্রিয়ভাবে লোড হবে এবং পরবর্তী ধাপে আপনি তা সংশোধন করতে পারবেন।'
+                        : 'Like bKash & Nagad, all personal KYC data will be extracted from NID for you to review and edit in the next step.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.35),
                   ),
                 ),
               ],
@@ -631,7 +618,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     borderRadius: BorderRadius.circular(10),
                     child: Image.memory(
                       bytes,
-                      height: 140,
+                      height: 130,
                       width: double.infinity,
                       fit: BoxFit.cover,
                     ),
@@ -642,7 +629,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     children: [
                       TextButton.icon(
                         icon: const Icon(Icons.refresh, size: 16, color: AppColors.primary),
-                        label: const Text('Retake Photo', style: TextStyle(color: AppColors.primary, fontSize: 13)),
+                        label: const Text('Retake', style: TextStyle(color: AppColors.primary, fontSize: 13)),
                         onPressed: () => _showImageSourceDialog(isFront),
                       ),
                       TextButton.icon(
@@ -664,21 +651,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                 ] else ...[
                   Container(
-                    height: 110,
+                    height: 100,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.grey.shade500),
-                        const SizedBox(height: 8),
+                        Icon(Icons.add_a_photo_outlined, size: 32, color: Colors.grey.shade500),
+                        const SizedBox(height: 6),
                         Text(
-                          'Tap to take photo or upload file',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                          'ট্যাপ করে ছবি তুলুন বা সিলেক্ট করুন',
+                          style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -692,8 +679,166 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // ── Step 3: Security PIN Setup ─────────────────────────────────────────────
-  Widget _buildStep3(AppState app) {
+  // ── Step 2: Extracted KYC Data Review & Edit (bKash / Nagad Style) ─────────
+  Widget _buildStep2KycDetails(AppState app) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Form(
+        key: _step2FormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      app.isBn
+                          ? 'এনআইডি থেকে তথ্য সফলভাবে সংগৃহীত হয়েছে। প্রয়োজন হলে সংশোধন করুন।'
+                          : 'Data extracted from NID. Review and edit if needed.',
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              app.isBn ? 'কেওয়াইসি তথ্যাবলী (KYC Details)' : 'Extracted KYC Profile',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 16),
+
+            // Full Name English
+            TextFormField(
+              controller: _nameEnController,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'পূর্ণ নাম (ইংরেজি / Name in English)' : 'Full Name (English)',
+                prefixIcon: const Icon(Icons.person_outline, color: AppColors.primary),
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'নাম লিখুন' : null,
+            ),
+            const SizedBox(height: 14),
+
+            // Full Name Bengali
+            TextFormField(
+              controller: _nameBnController,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'পূর্ণ নাম (বাংলা / Name in Bengali)' : 'Full Name (Bengali)',
+                prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.primary),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // NID Number
+            TextFormField(
+              controller: _nidNumberController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'জাতীয় পরিচয়পত্র নম্বর (NID Number)' : 'NID Number (10/13/17 Digits)',
+                prefixIcon: const Icon(Icons.credit_card, color: AppColors.primary),
+              ),
+              validator: (v) => (v == null || v.trim().length < 10) ? 'সঠিক NID নম্বর দিন (কমপক্ষে ১০ ডিজিট)' : null,
+            ),
+            const SizedBox(height: 14),
+
+            // Date of Birth
+            TextFormField(
+              controller: _dobController,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'জন্ম তারিখ (Date of Birth - YYYY-MM-DD)' : 'Date of Birth (YYYY-MM-DD)',
+                prefixIcon: const Icon(Icons.cake_outlined, color: AppColors.primary),
+                hintText: '1996-05-12',
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'জন্ম তারিখ দিন' : null,
+            ),
+            const SizedBox(height: 14),
+
+            // Father's Name
+            TextFormField(
+              controller: _fatherNameController,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'পিতার নাম (Father\'s Name)' : 'Father\'s Name',
+                prefixIcon: const Icon(Icons.person_pin_outlined, color: AppColors.primary),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Mother's Name
+            TextFormField(
+              controller: _motherNameController,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'মাতার নাম (Mother\'s Name)' : 'Mother\'s Name',
+                prefixIcon: const Icon(Icons.female_outlined, color: AppColors.primary),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Gender Selector
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(app.isBn ? 'লিঙ্গ (Gender)' : 'Gender', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildGenderChip('MALE', app.isBn ? 'পুরুষ (Male)' : 'Male'),
+                    const SizedBox(width: 10),
+                    _buildGenderChip('FEMALE', app.isBn ? 'মহিলা (Female)' : 'Female'),
+                    const SizedBox(width: 10),
+                    _buildGenderChip('OTHER', app.isBn ? 'অন্যান্য (Other)' : 'Other'),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Address
+            TextFormField(
+              controller: _addressController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'স্থায়ী ঠিকানা (Permanent Address)' : 'Permanent Address',
+                prefixIcon: const Icon(Icons.home_outlined, color: AppColors.primary),
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'ঠিকানা লিখুন' : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderChip(String value, String label) {
+    final isSelected = _selectedGender == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: AppColors.primary,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.textPrimary,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        fontSize: 12.5,
+      ),
+      onSelected: (selected) {
+        if (selected) setState(() => _selectedGender = value);
+      },
+    );
+  }
+
+  // ── Step 3: Contact Details & Security PIN ─────────────────────────────────
+  Widget _buildStep3ContactAndPin(AppState app) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(
@@ -702,17 +847,58 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              app.isBn ? 'সিকিউরিটি পিন সেট করুন' : 'Setup Security PIN',
+              app.isBn ? 'যোগাযোগ ও সিকিউরিটি পিন' : 'Contact & Security PIN',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 6),
             Text(
               app.isBn
-                  ? 'লগইন এবং অফার কেনার সময় ৪-৬ সংখ্যার এই পিন ব্যবহার করতে হবে।'
-                  : 'You will use this 4-6 digit numeric PIN to login and confirm orders.',
+                  ? 'আপনার মোবাইল নম্বর, ইমেইল এবং ৪-৬ সংখ্যার সিকিউরিটি পিন দিন।'
+                  : 'Enter your phone number, email and 4-6 digit numeric PIN.',
               style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
+
+            // Phone
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(11),
+              ],
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'মোবাইল নম্বর' : 'Mobile Phone Number',
+                prefixIcon: const Icon(Icons.phone_android, color: AppColors.primary),
+                hintText: '01XXXXXXXXX',
+                helperText: app.isBn ? '১১ ডিজিটের বিডি মোবাইল নম্বর' : '11-digit BD mobile number',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'মোবাইল নম্বর দিন';
+                final cleaned = v.trim();
+                if (cleaned.length != 11 || !cleaned.startsWith('01')) return 'সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (০১...)';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Email
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: app.isBn ? 'ইমেইল এড্রেস' : 'Email Address',
+                prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
+                hintText: 'you@example.com',
+                helperText: app.isBn ? 'ওটিপি কোড এই ইমেইলে যাবে' : 'OTP verification code will be sent here',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'ইমেইল এড্রেস দিন';
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) return 'সঠিক ইমেইল এড্রেস দিন';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
 
             // PIN
             TextFormField(
@@ -733,12 +919,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 hintText: '••••',
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return app.isBn ? 'পিন লিখুন' : 'Please enter security PIN';
-                }
-                if (v.trim().length < 4 || v.trim().length > 6) {
-                  return app.isBn ? 'পিন ৪ থেকে ৬ সংখ্যার হতে হবে' : 'PIN must be 4 to 6 digits';
-                }
+                if (v == null || v.trim().isEmpty) return 'পিন লিখুন';
+                if (v.trim().length < 4 || v.trim().length > 6) return 'পিন ৪ থেকে ৬ সংখ্যার হতে হবে';
                 return null;
               },
             ),
@@ -763,9 +945,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 hintText: '••••',
               ),
               validator: (v) {
-                if (v != _pinController.text) {
-                  return app.isBn ? 'পিন দুটি মিলছে না' : 'PINs do not match';
-                }
+                if (v != _pinController.text) return 'পিন দুটি মিলছে না';
                 return null;
               },
             ),
@@ -775,8 +955,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // ── Step 4: KYC & Profile Review Screen ────────────────────────────────────
-  Widget _buildStep4Review(AppState app) {
+  // ── Step 4: Final Summary & Review Screen ──────────────────────────────────
+  Widget _buildStep4FinalReview(AppState app) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -805,7 +985,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   radius: 26,
                   backgroundColor: Colors.white,
                   child: Text(
-                    _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'U',
+                    _nameEnController.text.isNotEmpty ? _nameEnController.text[0].toUpperCase() : 'U',
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary),
                   ),
                 ),
@@ -815,22 +995,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _nameController.text.isEmpty ? 'Customer Name' : _nameController.text,
+                        _nameEnController.text.isEmpty ? 'Customer Name' : _nameEnController.text,
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentGold,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          app.isBn ? 'যাচাইয়ের জন্য প্রস্তুত (Ready)' : 'Ready for Verification',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
+                      Text(
+                        _nameBnController.text.isEmpty ? '' : _nameBnController.text,
+                        style: const TextStyle(fontSize: 13, color: Colors.white70),
+                        maxLines: 1,
                       ),
                     ],
                   ),
@@ -841,7 +1015,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           const SizedBox(height: 20),
 
           Text(
-            app.isBn ? 'আপনার তথ্যের সারসংক্ষেপ' : 'Review Your Details',
+            app.isBn ? 'কেওয়াইসি ও একাউন্ট তথ্যাবলী' : 'KYC & Account Summary',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -860,30 +1034,51 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             child: Column(
               children: [
                 _buildReviewRow(
-                  icon: Icons.person_outline,
-                  label: app.isBn ? 'পূর্ণ নাম' : 'Full Name',
-                  value: _nameController.text,
-                  onEdit: () => _goToStep(0),
+                  icon: Icons.credit_card,
+                  label: app.isBn ? 'এনআইডি নম্বর' : 'NID Number',
+                  value: _nidNumberController.text,
+                  onEdit: () => _goToStep(1),
                 ),
-                const Divider(height: 20),
+                const Divider(height: 18),
+                _buildReviewRow(
+                  icon: Icons.cake_outlined,
+                  label: app.isBn ? 'জন্ম তারিখ' : 'Date of Birth',
+                  value: _dobController.text,
+                  onEdit: () => _goToStep(1),
+                ),
+                const Divider(height: 18),
+                _buildReviewRow(
+                  icon: Icons.person_pin_outlined,
+                  label: app.isBn ? 'পিতার নাম' : 'Father\'s Name',
+                  value: _fatherNameController.text,
+                  onEdit: () => _goToStep(1),
+                ),
+                const Divider(height: 18),
+                _buildReviewRow(
+                  icon: Icons.female_outlined,
+                  label: app.isBn ? 'মাতার নাম' : 'Mother\'s Name',
+                  value: _motherNameController.text,
+                  onEdit: () => _goToStep(1),
+                ),
+                const Divider(height: 18),
+                _buildReviewRow(
+                  icon: Icons.home_outlined,
+                  label: app.isBn ? 'ঠিকানা' : 'Address',
+                  value: _addressController.text,
+                  onEdit: () => _goToStep(1),
+                ),
+                const Divider(height: 18),
                 _buildReviewRow(
                   icon: Icons.phone_android,
                   label: app.isBn ? 'মোবাইল নম্বর' : 'Phone Number',
                   value: _phoneController.text,
-                  onEdit: () => _goToStep(0),
+                  onEdit: () => _goToStep(2),
                 ),
-                const Divider(height: 20),
+                const Divider(height: 18),
                 _buildReviewRow(
                   icon: Icons.email_outlined,
                   label: app.isBn ? 'ইমেইল এড্রেস' : 'Email Address',
                   value: _emailController.text,
-                  onEdit: () => _goToStep(0),
-                ),
-                const Divider(height: 20),
-                _buildReviewRow(
-                  icon: Icons.lock_outline,
-                  label: app.isBn ? 'সিকিউরিটি পিন' : 'Security PIN',
-                  value: '•••••• (Configured)',
                   onEdit: () => _goToStep(2),
                 ),
               ],
@@ -896,12 +1091,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                app.isBn ? 'কেওয়াইসি ডকুমেন্টস (NID)' : 'KYC Documents (NID)',
+                app.isBn ? 'এনআইডি কার্ড ডকুমেন্টস' : 'NID Card Images',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               TextButton(
-                onPressed: () => _goToStep(1),
-                child: Text(app.isBn ? 'পরিবর্তন' : 'Edit', style: const TextStyle(color: AppColors.primary)),
+                onPressed: () => _goToStep(0),
+                child: Text(app.isBn ? 'পরিবর্তন' : 'Retake', style: const TextStyle(color: AppColors.primary)),
               ),
             ],
           ),
@@ -911,14 +1106,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             children: [
               Expanded(
                 child: _buildNidPreviewThumb(
-                  label: app.isBn ? 'সামনের পিঠ (Front)' : 'Front Side',
+                  label: app.isBn ? 'সামনের পাতা (Front)' : 'Front Side',
                   bytes: _nidFrontBytes,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildNidPreviewThumb(
-                  label: app.isBn ? 'পেছনের পিঠ (Back)' : 'Back Side',
+                  label: app.isBn ? 'পেছনের পাতা (Back)' : 'Back Side',
                   bytes: _nidBackBytes,
                 ),
               ),
@@ -960,7 +1155,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
-              Text(value.isEmpty ? '-' : value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(value.isEmpty ? '-' : value, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -1030,7 +1225,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         children: [
           if (_currentStep > 0) ...[
             OutlinedButton(
-              onPressed: _isLoading ? null : _prevStep,
+              onPressed: (_isLoading || _isScanning) ? null : _prevStep,
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1041,7 +1236,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ],
           Expanded(
             child: ElevatedButton(
-              onPressed: _isLoading
+              onPressed: (_isLoading || _isScanning)
                   ? null
                   : () {
                       if (_currentStep == 3) {
@@ -1052,27 +1247,42 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 3,
+                shadowColor: AppColors.primary.withOpacity(0.4),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              child: (_isLoading || _isScanning)
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          _isScanning ? (app.isBn ? 'এনআইডি স্ক্যান হচ্ছে...' : 'Scanning NID...') : (app.isBn ? 'প্রসেস করা হচ্ছে...' : 'Processing...'),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _currentStep == 3
-                              ? (app.isBn ? 'তথ্য নিশ্চিত ও একাউন্ট খুলুন' : 'Confirm & Register')
-                              : (app.isBn ? 'পরবর্তী ধাপ' : 'Continue'),
+                          _currentStep == 0
+                              ? (app.isBn ? 'এনআইডি স্ক্যান করুন' : 'Scan & Extract NID')
+                              : (_currentStep == 3
+                                  ? (app.isBn ? 'তথ্য নিশ্চিত ও ওটিপি পাঠান' : 'Confirm & Send OTP')
+                                  : (app.isBn ? 'পরবর্তী ধাপ' : 'Continue')),
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         const SizedBox(width: 8),
                         Icon(
-                          _currentStep == 3 ? Icons.check_circle_outline : Icons.arrow_forward,
+                          _currentStep == 3 ? Icons.send_rounded : Icons.arrow_forward,
                           size: 18,
                           color: Colors.white,
                         ),

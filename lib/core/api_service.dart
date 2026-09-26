@@ -50,12 +50,61 @@ class CustomerApiService {
 
   // ── 1. Authentication & Registration ─────────────────────────────────────
 
-  /// Multi-step registration with NID Front & Back files
+  /// Extract NID details (OCR) like bKash / Nagad
+  Future<Map<String, dynamic>> extractNid({
+    Uint8List? nidFrontBytes,
+    String? nidFrontPath,
+    Uint8List? nidBackBytes,
+    String? nidBackPath,
+    String? name,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/auth/extract-nid');
+    final req = http.MultipartRequest('POST', uri);
+
+    if (name != null && name.isNotEmpty) {
+      req.fields['name'] = name.trim();
+    }
+
+    if (nidFrontBytes != null) {
+      req.files.add(http.MultipartFile.fromBytes(
+        'nidFrontImage',
+        nidFrontBytes,
+        filename: 'nid_front.jpg',
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    } else if (nidFrontPath != null && nidFrontPath.isNotEmpty) {
+      req.files.add(await http.MultipartFile.fromPath('nidFrontImage', nidFrontPath));
+    }
+
+    if (nidBackBytes != null) {
+      req.files.add(http.MultipartFile.fromBytes(
+        'nidBackImage',
+        nidBackBytes,
+        filename: 'nid_back.jpg',
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    } else if (nidBackPath != null && nidBackPath.isNotEmpty) {
+      req.files.add(await http.MultipartFile.fromPath('nidBackImage', nidBackPath));
+    }
+
+    final streamedRes = await req.send();
+    final res = await http.Response.fromStream(streamedRes);
+    return _parse(res);
+  }
+
+  /// Multi-step registration with NID Front & Back files and full KYC attributes
   Future<Map<String, dynamic>> register({
     required String name,
     required String email,
     required String phone,
     required String pin,
+    String? nidNumber,
+    String? nameBn,
+    String? fatherName,
+    String? motherName,
+    String? dateOfBirth,
+    String? address,
+    String? gender,
     Uint8List? nidFrontBytes,
     String? nidFrontPath,
     Uint8List? nidBackBytes,
@@ -68,6 +117,14 @@ class CustomerApiService {
     req.fields['email'] = email.trim();
     req.fields['phone'] = phone.trim();
     req.fields['pin'] = pin.trim();
+
+    if (nidNumber != null) req.fields['nidNumber'] = nidNumber.trim();
+    if (nameBn != null) req.fields['nameBn'] = nameBn.trim();
+    if (fatherName != null) req.fields['fatherName'] = fatherName.trim();
+    if (motherName != null) req.fields['motherName'] = motherName.trim();
+    if (dateOfBirth != null) req.fields['dateOfBirth'] = dateOfBirth.trim();
+    if (address != null) req.fields['address'] = address.trim();
+    if (gender != null) req.fields['gender'] = gender.trim();
 
     if (nidFrontBytes != null) {
       req.files.add(http.MultipartFile.fromBytes(
