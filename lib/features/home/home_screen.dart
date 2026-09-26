@@ -6,6 +6,7 @@ import '../../core/sound_service.dart';
 import '../../core/widgets/balance_card.dart';
 import '../../core/widgets/offer_card.dart';
 import '../../core/widgets/prayer_times_card.dart';
+import '../auth/kyc_review_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../offers/offer_detail_sheet.dart';
 import '../wallet/transaction_history_screen.dart';
@@ -48,6 +49,74 @@ class HomeScreen extends StatelessWidget {
                       },
                     ),
                   ),
+
+                  // KYC Under Review Banner (if pending)
+                  if (app.isKycPending || app.kycStatus == 'PENDING') ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            SoundService.playTap();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => KycReviewScreen(
+                                  name: app.userName,
+                                  phone: app.userPhone,
+                                  email: app.userEmail,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF59E0B),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.hourglass_top, color: Colors.white, size: 16),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        app.isBn ? 'কেওয়াইসি ভেরিফিকেশন পর্যালোচনায় আছে' : 'KYC Under Review',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: Color(0xFF92400E),
+                                        ),
+                                      ),
+                                      Text(
+                                        app.isBn ? 'স্ট্যাটাস ও বিবরণ দেখতে এখানে ট্যাপ করুন' : 'Tap to check live verification status',
+                                        style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right, color: Color(0xFF92400E), size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 14),
 

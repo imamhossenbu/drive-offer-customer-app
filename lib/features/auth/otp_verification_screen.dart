@@ -7,6 +7,7 @@ import '../../core/app_state.dart';
 import '../../core/constants.dart';
 import '../../core/sound_service.dart';
 import '../customer_main.dart';
+import 'kyc_review_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String registrationId;
@@ -103,7 +104,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const CustomerMain()),
+        MaterialPageRoute(
+          builder: (_) => KycReviewScreen(
+            email: widget.email,
+            isFromRegistration: true,
+          ),
+        ),
         (route) => false,
       );
     } catch (e) {
