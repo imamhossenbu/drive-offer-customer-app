@@ -32,7 +32,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   bool _isLoading = false;
   bool _isResending = false;
-  int _countdown = 60;
+  int _countdown = 300;
   Timer? _timer;
 
   @override
@@ -47,7 +47,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _startTimer() {
-    setState(() => _countdown = 60);
+    setState(() => _countdown = 300);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 0) {
@@ -320,7 +320,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   ),
                   if (_countdown > 0)
                     Text(
-                      'Resend in ${_countdown}s',
+                      app.isBn
+                          ? 'পুনরায় পাঠান (${(_countdown ~/ 60)}মি. ${(_countdown % 60).toString().padLeft(2, '0')}সে.)'
+                          : 'Resend in ${(_countdown ~/ 60)}m ${(_countdown % 60).toString().padLeft(2, '0')}s',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.secondary),
                     )
                   else
