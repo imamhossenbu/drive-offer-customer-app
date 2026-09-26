@@ -41,8 +41,23 @@ class CustomerApiService {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         return body is Map<String, dynamic> ? body : {'data': body, 'success': true};
       }
-      final msg = body['message'] ?? body['error'] ?? 'Request failed (${res.statusCode})';
-      throw ApiException(msg.toString(), statusCode: res.statusCode, code: body['code']?.toString());
+
+      String? msg;
+      String? code;
+
+      if (body is Map) {
+        if (body['error'] is Map) {
+          msg = body['error']['message']?.toString();
+          code = body['error']['code']?.toString();
+        } else if (body['error'] is String) {
+          msg = body['error'].toString();
+        }
+        msg ??= body['message']?.toString();
+        code ??= body['code']?.toString();
+      }
+
+      msg ??= 'Request failed (${res.statusCode})';
+      throw ApiException(msg, statusCode: res.statusCode, code: code);
     } on FormatException {
       throw ApiException('Server returned an unexpected response format', statusCode: res.statusCode);
     }

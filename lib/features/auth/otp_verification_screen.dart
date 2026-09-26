@@ -117,10 +117,23 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       SoundService.playError();
+      
+      String errorMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+      if (e is ApiException) {
+        if (e.code == 'AUTH_OTP_INVALID' || errorMsg.contains('Incorrect') || errorMsg.contains('invalid')) {
+          errorMsg = 'ভুল ওটিপি কোড! অনুগ্রহ করে সঠিক ৬-ডিজিটের কোড লিখুন।';
+        } else if (e.code == 'AUTH_OTP_EXPIRED' || errorMsg.contains('expired')) {
+          errorMsg = 'ওটিপি কোডের মেয়াদ শেষ হয়ে গেছে। পুনরায় কোড পাঠান।';
+        } else if (e.code == 'AUTH_OTP_TOO_MANY_ATTEMPTS') {
+          errorMsg = 'অনেকবার ভুল কোড দেওয়া হয়েছে। অনুগ্রহ করে নতুন কোড রিকোয়েস্ট করুন।';
+        }
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(errorMsg),
           backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -141,8 +154,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       SoundService.playSuccess();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('A new OTP code has been sent to your email.'),
+          content: Text('আপনার ইমেইলে নতুন ওটিপি কোড পাঠানো হয়েছে।'),
           backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
@@ -150,8 +164,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '')),
           backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -215,20 +230,27 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(6, (index) {
                   return SizedBox(
-                    width: 46,
-                    height: 54,
+                    width: 48,
+                    height: 60,
                     child: TextFormField(
                       controller: _controllers[index],
                       focusNode: _focusNodes[index],
                       textAlign: TextAlign.center,
+                      textAlignVertical: TextAlignVertical.center,
                       keyboardType: TextInputType.number,
                       maxLength: 1,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                        height: 1.2,
+                      ),
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
                         fillColor: Colors.white,
+                        contentPadding: EdgeInsets.zero,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
