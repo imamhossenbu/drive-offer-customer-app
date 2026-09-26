@@ -373,4 +373,25 @@ class CustomerApiService {
     );
     return _parse(res);
   }
+
+  // ── 7. Prayer Times ──────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getPrayerTimes({String district = 'Dhaka', double? lat, double? lng}) async {
+    final params = <String, String>{};
+    if (district.isNotEmpty) params['district'] = district;
+    if (lat != null) params['lat'] = lat.toString();
+    if (lng != null) params['lng'] = lng.toString();
+
+    final uri = Uri.parse('$_baseUrl/prayer-times').replace(queryParameters: params.isEmpty ? null : params);
+    final res = await http.get(uri, headers: _headers(withAuth: false));
+    return _parse(res);
+  }
+
+  Future<Map<String, dynamic>> getPrayerDistricts() async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/prayer-times/districts'),
+      headers: _headers(withAuth: false),
+    );
+    return _parse(res);
+  }
 }

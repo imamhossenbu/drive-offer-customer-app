@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/sound_service.dart';
 import '../../core/widgets/balance_card.dart';
 import '../../core/widgets/offer_card.dart';
+import '../../core/widgets/prayer_times_card.dart';
 import '../notifications/notifications_screen.dart';
 import '../offers/offer_detail_sheet.dart';
 import '../wallet/transaction_history_screen.dart';
@@ -48,8 +49,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // Notice Ticker if any
-                  _buildNoticeTicker(app),
+                  const SizedBox(height: 14),
+
+                  // Islamic Prayer Times Card (নামাজের সময়সূচি)
+                  PrayerTimesCard(isBn: app.isBn),
 
                   const SizedBox(height: 16),
                   // Quick Operator Selector
@@ -237,34 +240,6 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildNoticeTicker(AppState app) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.accentGold.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.accentGold.withOpacity(0.4)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.campaign, color: Color(0xFFD97706), size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              app.isBn
-                  ? '⚡ সকল ড্রাইভ অফার দ্রুত ডেলিভারি চালু আছে! ৫-১০ মিনিটের মধ্যে এক্টিভ হবে।'
-                  : '⚡ Instant Drive Offers processing is active! Delivered within 5-10 minutes.',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
