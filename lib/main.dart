@@ -1,0 +1,82 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'core/app_state.dart';
+import 'core/constants.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/registration_screen.dart';
+import 'features/auth/splash_screen.dart';
+import 'features/customer_main.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const CustomerApp());
+}
+
+class CustomerApp extends StatelessWidget {
+  const CustomerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+      ],
+      child: MaterialApp(
+        title: AppConstants.appName,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          primaryColor: AppColors.primary,
+          scaffoldBackgroundColor: AppColors.surface,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.primary,
+            primary: AppColors.primary,
+            secondary: AppColors.secondary,
+            surface: AppColors.surface,
+          ),
+          textTheme: GoogleFonts.hindSiliguriTextTheme(
+            Theme.of(context).textTheme,
+          ).apply(
+            bodyColor: AppColors.textPrimary,
+            displayColor: AppColors.textPrimary,
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: false,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.error),
+            ),
+          ),
+        ),
+        home: const SplashScreen(),
+        routes: {
+          '/splash': (_) => const SplashScreen(),
+          '/login': (_) => const LoginScreen(),
+          '/register': (_) => const RegistrationScreen(),
+          '/main': (_) => const CustomerMain(),
+        },
+      ),
+    );
+  }
+}
