@@ -262,6 +262,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   onPressed: _isLoading ? null : _handleVerify,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 3,
+                    shadowColor: AppColors.primary.withOpacity(0.4),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: _isLoading
@@ -270,9 +273,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           width: 22,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
-                      : Text(
-                          app.isBn ? 'কোড যাচাই ও এগিয়ে যান' : 'Verify & Continue',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'কোড যাচাই ও এগিয়ে যান',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.check_circle_outline, size: 20, color: Colors.white),
+                          ],
                         ),
                 ),
               ),
