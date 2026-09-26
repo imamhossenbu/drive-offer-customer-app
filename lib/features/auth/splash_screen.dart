@@ -35,14 +35,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 2000), () {
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
-      final state = context.read<CustomerAppState>();
-      if (state.isLoggedIn) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const CustomerMain()),
-        );
-      } else {
+      try {
+        final state = Provider.of<AppState>(context, listen: false);
+        if (state.isLoggedIn) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const CustomerMain()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
+      } catch (e) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );

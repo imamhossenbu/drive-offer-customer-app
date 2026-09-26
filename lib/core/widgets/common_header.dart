@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../constants.dart';
 import '../../features/notifications/notifications_screen.dart';
-import '../../features/kyc/kyc_verification_screen.dart';
+import '../../features/profile/profile_screen.dart';
 
 class CustomerHeader extends StatelessWidget implements PreferredSizeWidget {
   final bool showBack;
@@ -100,7 +100,7 @@ class CustomerHeader extends StatelessWidget implements PreferredSizeWidget {
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const KycVerificationScreen()),
+                                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
                                 );
                               },
                               child: Container(
@@ -215,7 +215,7 @@ class CustomerHeader extends StatelessWidget implements PreferredSizeWidget {
                     clipBehavior: Clip.none,
                     children: [
                       const Icon(Icons.notifications_outlined, size: 20, color: AppColors.textDark),
-                      if (state.unreadNotifications > 0)
+                      if (state.unreadNotificationsCount > 0)
                         Positioned(
                           right: -3,
                           top: -3,
@@ -226,7 +226,7 @@ class CustomerHeader extends StatelessWidget implements PreferredSizeWidget {
                               shape: BoxShape.circle,
                             ),
                             child: Text(
-                              state.unreadNotifications.toString(),
+                              state.unreadNotificationsCount.toString(),
                               style: const TextStyle(
                                 fontSize: 9,
                                 color: Colors.white,
