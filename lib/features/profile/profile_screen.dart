@@ -7,7 +7,6 @@ import '../../core/auth_storage.dart';
 import '../../core/constants.dart';
 import '../../core/sound_service.dart';
 import '../auth/login_screen.dart';
-import '../auth/kyc_review_screen.dart';
 import '../wallet/transaction_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -241,62 +240,41 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // KYC Status Badge
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: app.kycStatus == 'VERIFIED'
+                          ? const Color(0xFFDCFCE7)
+                          : (app.kycStatus == 'PENDING' ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2)),
                       borderRadius: BorderRadius.circular(20),
-                      onTap: () {
-                        SoundService.playTap();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => KycReviewScreen(
-                              name: app.userName,
-                              phone: app.userPhone,
-                              email: app.userEmail,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: app.kycStatus == 'VERIFIED'
-                              ? const Color(0xFFDCFCE7)
-                              : (app.kycStatus == 'PENDING' ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2)),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: app.kycStatus == 'VERIFIED'
-                                ? const Color(0xFF86EFAC)
-                                : (app.kycStatus == 'PENDING' ? const Color(0xFFFDE68A) : const Color(0xFFFECACA)),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              app.kycStatus == 'VERIFIED' ? Icons.verified : Icons.hourglass_top,
-                              size: 16,
-                              color: app.kycStatus == 'VERIFIED'
-                                  ? AppColors.success
-                                  : (app.kycStatus == 'PENDING' ? const Color(0xFFD97706) : AppColors.error),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'KYC Status: ${app.kycStatus}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: app.kycStatus == 'VERIFIED'
-                                    ? AppColors.success
-                                    : (app.kycStatus == 'PENDING' ? const Color(0xFFD97706) : AppColors.error),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.chevron_right, size: 14, color: AppColors.textSecondary),
-                          ],
-                        ),
+                      border: Border.all(
+                        color: app.kycStatus == 'VERIFIED'
+                            ? const Color(0xFF86EFAC)
+                            : (app.kycStatus == 'PENDING' ? const Color(0xFFFDE68A) : const Color(0xFFFECACA)),
                       ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          app.kycStatus == 'VERIFIED' ? Icons.verified : Icons.hourglass_top,
+                          size: 16,
+                          color: app.kycStatus == 'VERIFIED'
+                              ? AppColors.success
+                              : (app.kycStatus == 'PENDING' ? const Color(0xFFD97706) : AppColors.error),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'KYC Status: ${app.kycStatus}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: app.kycStatus == 'VERIFIED'
+                                ? AppColors.success
+                                : (app.kycStatus == 'PENDING' ? const Color(0xFFD97706) : AppColors.error),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

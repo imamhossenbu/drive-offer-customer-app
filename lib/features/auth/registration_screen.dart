@@ -41,6 +41,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _step3FormKey = GlobalKey<FormState>();
   bool _obscurePin = true;
   bool _obscureConfirmPin = true;
+
+  // Step 4: Review & Agreement
   bool _agreedToTerms = true;
 
   @override
@@ -155,9 +157,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
         return;
       }
+    } else if (_currentStep == 2) {
+      if (!_step3FormKey.currentState!.validate()) return;
     }
 
-    if (_currentStep < 2) {
+    if (_currentStep < 3) {
       SoundService.playTap();
       setState(() => _currentStep++);
       _pageController.animateToPage(
@@ -180,8 +184,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  void _goToStep(int stepIndex) {
+    if (stepIndex >= 0 && stepIndex <= 3) {
+      SoundService.playTap();
+      setState(() => _currentStep = stepIndex);
+      _pageController.animateToPage(
+        stepIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   Future<void> _handleRegister() async {
-    if (!_step3FormKey.currentState!.validate()) return;
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -209,6 +224,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       final data = res['data'] ?? res;
       final registrationId = data['registrationId']?.toString() ?? '';
+      final otpCode = data['otpCode']?.toString();
       final email = _emailController.text.trim();
 
       if (!mounted) return;
@@ -222,6 +238,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             registrationId: registrationId,
             email: email,
             pin: _pinController.text.trim(),
+            initialOtp: otpCode,
           ),
         ),
       );
@@ -247,7 +264,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: Text(
-          app.isBn ? 'নতুন একাউন্ট খুলুন' : 'Create Customer Account',
+          app.isBn ? 'নতুন একাউন্ট নিবন্ধন' : 'Create Customer Account',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -276,6 +293,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   _buildStep1(app),
                   _buildStep2(app),
                   _buildStep3(app),
+                  _buildStep4Review(app),
                 ],
               ),
             ),
@@ -288,13 +306,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildStepperHeader(AppState app) {
     final steps = [
-      app.isBn ? 'ব্যক্তিগত তথ্য' : 'Personal Info',
-      app.isBn ? 'এনআইডি কেওয়াইসি' : 'NID KYC',
+      app.isBn ? 'ব্যক্তিগত তথ্য' : 'Personal',
+      app.isBn ? 'এনআইডি কেওয়াইসি' : 'KYC Docs',
       app.isBn ? 'পিন সেটআপ' : 'Security PIN',
+      app.isBn ? 'রিভিউ ও নিশ্চিত' : 'Review',
     ];
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 16),
       decoration: const BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
@@ -308,47 +327,55 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isCompleted
-                              ? AppColors.accentGold
-                              : (isActive ? Colors.white : Colors.white.withOpacity(0.3)),
-                        ),
-                        child: Center(
-                          child: isCompleted
-                              ? const Icon(Icons.check, size: 18, color: Colors.black87)
-                              : Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isActive ? AppColors.primary : Colors.white,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (index < _currentStep) {
+                        _goToStep(index);
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isCompleted
+                                ? AppColors.accentGold
+                                : (isActive ? Colors.white : Colors.white.withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: isCompleted
+                                ? const Icon(Icons.check, size: 16, color: Colors.black87)
+                                : Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isActive ? AppColors.primary : Colors.white,
+                                    ),
                                   ),
-                                ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        steps[index],
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                          color: isActive ? Colors.white : Colors.white70,
+                        const SizedBox(height: 5),
+                        Text(
+                          steps[index],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                            color: isActive ? Colors.white : Colors.white70,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 if (index < steps.length - 1)
                   Container(
-                    width: 24,
+                    width: 16,
                     height: 2,
                     margin: const EdgeInsets.only(bottom: 18),
                     color: _currentStep > index ? AppColors.accentGold : Colors.white.withOpacity(0.3),
@@ -742,24 +769,245 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 20),
-
-            // Terms Checkbox
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _agreedToTerms,
-              activeColor: AppColors.primary,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: Text(
-                app.isBn
-                    ? 'আমি ড্রাইভ অফার প্ল্যাটফর্মের সকল নিয়ম ও শর্তাবলী মেনে নিচ্ছি।'
-                    : 'I agree to the Terms & Conditions and Privacy Policy.',
-                style: const TextStyle(fontSize: 13),
-              ),
-              onChanged: (v) => setState(() => _agreedToTerms = v ?? true),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Step 4: KYC & Profile Review Screen ────────────────────────────────────
+  Widget _buildStep4Review(AppState app) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primary.withOpacity(0.85)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'U',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _nameController.text.isEmpty ? 'Customer Name' : _nameController.text,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentGold,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          app.isBn ? 'যাচাইয়ের জন্য প্রস্তুত (Ready)' : 'Ready for Verification',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          Text(
+            app.isBn ? 'আপনার তথ্যের সারসংক্ষেপ' : 'Review Your Details',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          // Details List Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildReviewRow(
+                  icon: Icons.person_outline,
+                  label: app.isBn ? 'পূর্ণ নাম' : 'Full Name',
+                  value: _nameController.text,
+                  onEdit: () => _goToStep(0),
+                ),
+                const Divider(height: 20),
+                _buildReviewRow(
+                  icon: Icons.phone_android,
+                  label: app.isBn ? 'মোবাইল নম্বর' : 'Phone Number',
+                  value: _phoneController.text,
+                  onEdit: () => _goToStep(0),
+                ),
+                const Divider(height: 20),
+                _buildReviewRow(
+                  icon: Icons.email_outlined,
+                  label: app.isBn ? 'ইমেইল এড্রেস' : 'Email Address',
+                  value: _emailController.text,
+                  onEdit: () => _goToStep(0),
+                ),
+                const Divider(height: 20),
+                _buildReviewRow(
+                  icon: Icons.lock_outline,
+                  label: app.isBn ? 'সিকিউরিটি পিন' : 'Security PIN',
+                  value: '•••••• (Configured)',
+                  onEdit: () => _goToStep(2),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // NID Documents Review
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                app.isBn ? 'কেওয়াইসি ডকুমেন্টস (NID)' : 'KYC Documents (NID)',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => _goToStep(1),
+                child: Text(app.isBn ? 'পরিবর্তন' : 'Edit', style: const TextStyle(color: AppColors.primary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildNidPreviewThumb(
+                  label: app.isBn ? 'সামনের পিঠ (Front)' : 'Front Side',
+                  bytes: _nidFrontBytes,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildNidPreviewThumb(
+                  label: app.isBn ? 'পেছনের পিঠ (Back)' : 'Back Side',
+                  bytes: _nidBackBytes,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Terms and Conditions
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _agreedToTerms,
+            activeColor: AppColors.primary,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(
+              app.isBn
+                  ? 'আমি ড্রাইভ অফার প্ল্যাটফর্মের সকল নিয়ম, শর্তাবলী ও গোপনীয়তা নীতি মেনে নিচ্ছি।'
+                  : 'I agree to the Terms & Conditions and Privacy Policy.',
+              style: const TextStyle(fontSize: 12.5),
+            ),
+            onChanged: (v) => setState(() => _agreedToTerms = v ?? true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onEdit,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.primary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+              Text(value.isEmpty ? '-' : value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+          onPressed: onEdit,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNidPreviewThumb({
+    required String label,
+    required Uint8List? bytes,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: bytes != null
+                ? Image.memory(
+                    bytes,
+                    height: 90,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    height: 90,
+                    color: Colors.grey.shade100,
+                    child: const Center(
+                      child: Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -796,7 +1044,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               onPressed: _isLoading
                   ? null
                   : () {
-                      if (_currentStep == 2) {
+                      if (_currentStep == 3) {
                         _handleRegister();
                       } else {
                         _nextStep();
@@ -817,14 +1065,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _currentStep == 2
-                              ? (app.isBn ? 'একাউন্ট তৈরি করুন' : 'Complete Registration')
+                          _currentStep == 3
+                              ? (app.isBn ? 'তথ্য নিশ্চিত ও একাউন্ট খুলুন' : 'Confirm & Register')
                               : (app.isBn ? 'পরবর্তী ধাপ' : 'Continue'),
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         const SizedBox(width: 8),
                         Icon(
-                          _currentStep == 2 ? Icons.check_circle_outline : Icons.arrow_forward,
+                          _currentStep == 3 ? Icons.check_circle_outline : Icons.arrow_forward,
                           size: 18,
                           color: Colors.white,
                         ),
