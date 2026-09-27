@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'auth_storage.dart';
@@ -223,7 +224,7 @@ class CustomerApiService {
         'pin': pin.trim(),
         'deviceId': deviceId ?? 'device-${DateTime.now().millisecondsSinceEpoch}',
         'deviceName': deviceName ?? 'Mobile App',
-        'platform': Platform.isAndroid ? 'ANDROID' : (Platform.isIOS ? 'IOS' : 'OTHER'),
+        'platform': kIsWeb ? 'WEB' : (Platform.isAndroid ? 'ANDROID' : (Platform.isIOS ? 'IOS' : 'OTHER')),
         'appVersion': '1.0.0',
       }),
     );
