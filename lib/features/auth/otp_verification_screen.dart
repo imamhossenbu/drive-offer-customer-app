@@ -73,6 +73,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   String get _otpCode => _controllers.map((c) => c.text).join();
 
   Future<void> _handleVerify() async {
+    if (_isLoading) return;
     final code = _otpCode;
     if (code.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
