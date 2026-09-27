@@ -293,17 +293,23 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                         ),
                         child: Column(
                           children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: gw['color'] as Color,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  key[0],
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            Image.asset(
+                              gw['icon'] as String,
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: gw['color'] as Color,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    key[0],
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
                                 ),
                               ),
                             ),

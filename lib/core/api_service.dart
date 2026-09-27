@@ -467,4 +467,35 @@ class CustomerApiService {
     );
     return _parse(res);
   }
+
+  // ── 8. Profile & Account ──────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> updateProfile({required String name}) async {
+    final res = await http.patch(
+      Uri.parse('$_baseUrl/users/me'),
+      headers: _headers(),
+      body: jsonEncode({'name': name.trim()}),
+    );
+    return _parse(res);
+  }
+
+  Future<Map<String, dynamic>> uploadProfileImage({
+    Uint8List? bytes,
+    String? path,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/users/me/profile-image');
+    final req = http.MultipartRequest('POST', uri);
+    final headers = _headers();
+    headers.remove('Content-Type');
+    req.headers.addAll(headers);
+
+    if (bytes != null) {
+      req.files.add(http.MultipartFile.fromBytes('profileImage', bytes, filename: 'profile.jpg'));
+    } else if (path != null) {
+      req.files.add(await http.MultipartFile.fromPath('profileImage', path));
+    }
+    final streamedRes = await req.send();
+    final res = await http.Response.fromStream(streamedRes);
+    return _parse(res);
+  }
 }

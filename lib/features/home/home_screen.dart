@@ -49,11 +49,6 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 14),
-
-                  // Islamic Prayer Times Card (নামাজের সময়সূচি)
-                  PrayerTimesCard(isBn: app.isBn),
-
                   const SizedBox(height: 16),
                   // Quick Operator Selector
                   _buildOperatorSection(context, app),
@@ -108,6 +103,11 @@ class HomeScreen extends StatelessWidget {
 
                   // Offers List
                   _buildTrendingOffers(context, app),
+
+                  const SizedBox(height: 24),
+
+                  // Islamic Prayer Times Card (নামাজের সময়সূচি - Moved to Bottom)
+                  PrayerTimesCard(isBn: app.isBn),
 
                   const SizedBox(height: 40),
                 ],
@@ -229,10 +229,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     onPressed: () {
                       SoundService.playTap();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                      );
+                      _showNotificationsSheet(context, app);
                     },
                   ),
                 ],
@@ -246,12 +243,12 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildOperatorSection(BuildContext context, AppState app) {
     final operators = [
-      {'id': 'ALL', 'name': app.isBn ? 'সকল' : 'All', 'icon': null},
-      {'id': 'GP', 'name': 'Grameenphone', 'color': const Color(0xFF0091DA)},
-      {'id': 'ROBI', 'name': 'Robi', 'color': const Color(0xFFED1C24)},
-      {'id': 'BANGLALINK', 'name': 'Banglalink', 'color': const Color(0xFFFF6600)},
-      {'id': 'AIRTEL', 'name': 'Airtel', 'color': const Color(0xFFE60000)},
-      {'id': 'TELETALK', 'name': 'Teletalk', 'color': const Color(0xFF00A651)},
+      {'id': 'ALL', 'name': app.isBn ? 'সকল' : 'All', 'asset': null},
+      {'id': 'GP', 'name': 'GP', 'asset': 'assets/operators/gp.png'},
+      {'id': 'ROBI', 'name': 'Robi', 'asset': 'assets/operators/robi.png'},
+      {'id': 'BANGLALINK', 'name': 'BL', 'asset': 'assets/operators/banglalink.png'},
+      {'id': 'AIRTEL', 'name': 'Airtel', 'asset': 'assets/operators/airtel.png'},
+      {'id': 'TELETALK', 'name': 'Teletalk', 'asset': 'assets/operators/teletalk.png'},
     ];
 
     return Column(
@@ -259,14 +256,23 @@ class HomeScreen extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            app.isBn ? 'অপারেটর নির্বাচন করুন' : 'Select Operator',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                app.isBn ? 'অপারেটর নির্বাচন করুন' : 'Select Operator',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              Text(
+                app.isBn ? 'ফিল্টার করতে ট্যাপ করুন' : 'Tap to filter offers',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 42,
+          height: 44,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
@@ -275,16 +281,18 @@ class HomeScreen extends StatelessWidget {
             itemBuilder: (ctx, index) {
               final op = operators[index];
               final isSelected = app.selectedOperator == op['id'];
+              final asset = op['asset'] as String?;
 
               return InkWell(
                 onTap: () {
                   SoundService.playTap();
                   app.setOperator(op['id'] as String);
+                  onNavigateTab(1); // Navigate to Offers tab filtered by operator
                 },
                 borderRadius: BorderRadius.circular(24),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -295,15 +303,37 @@ class HomeScreen extends StatelessWidget {
                         ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))]
                         : null,
                   ),
-                  child: Center(
-                    child: Text(
-                      op['name'] as String,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? Colors.white : AppColors.textPrimary,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (asset != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            asset,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ] else ...[
+                        Icon(
+                          Icons.apps,
+                          size: 18,
+                          color: isSelected ? Colors.white : AppColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        op['name'] as String,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               );
@@ -462,6 +492,131 @@ class HomeScreen extends StatelessWidget {
               builder: (_) => OfferDetailSheet(offer: offer),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showNotificationsSheet(BuildContext context, AppState app) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.notifications_active, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          app.isBn ? 'নোটিফিকেশন সমুহ' : 'Notifications',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: app.notifications.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.notifications_none, size: 56, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              app.isBn ? 'কোন নোটিফিকেশন নেই' : 'No notifications yet',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: app.notifications.length,
+                        itemBuilder: (ctx, index) {
+                          final notif = app.notifications[index];
+                          final isUnread = !notif.isRead;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isUnread ? const Color(0xFFF0FDF4) : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isUnread ? AppColors.primary.withOpacity(0.4) : Colors.grey.shade200,
+                              ),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2)),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        notif.title,
+                                        style: TextStyle(
+                                          fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                                          fontSize: 14,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isUnread)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.secondary,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Text('New', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  notif.message,
+                                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         );
       },
     );

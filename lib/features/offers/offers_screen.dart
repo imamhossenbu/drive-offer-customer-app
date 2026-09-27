@@ -44,12 +44,44 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
       {'id': 'TELETALK', 'name': 'Teletalk'},
     ];
 
-    final categories = [
-      {'id': 'ALL', 'name': app.isBn ? 'সকল প্যাকেজ' : 'All'},
-      {'id': 'INTERNET', 'name': app.isBn ? 'ইন্টারনেট' : 'Internet'},
-      {'id': 'MINUTE', 'name': app.isBn ? 'মিনিট' : 'Minutes'},
-      {'id': 'COMBO', 'name': app.isBn ? 'কম্বো / বান্ডেল' : 'Combo'},
-    ];
+    // Dynamic Category Extraction based on actual offers data
+    final Set<String> rawCatSet = {'ALL'};
+    final allOffers = [...app.driveOffers, ...app.regularOffers];
+    for (final o in allOffers) {
+      if (app.selectedOperator == 'ALL' || o.operator.toUpperCase() == app.selectedOperator) {
+        if (o.category.trim().isNotEmpty) {
+          rawCatSet.add(o.category.trim().toUpperCase());
+        }
+      }
+    }
+    // Guarantee base categories are present
+    rawCatSet.addAll(['INTERNET', 'MINUTE', 'COMBO']);
+
+    final Map<String, String> catNameBn = {
+      'ALL': 'সকল প্যাকেজ',
+      'INTERNET': 'ইন্টারনেট',
+      'MINUTE': 'মিনিট',
+      'COMBO': 'কম্বো / বান্ডেল',
+      'SPECIAL': 'স্পেশাল',
+      'CASHBACK': 'ক্যাশব্যাক',
+    };
+    final Map<String, String> catNameEn = {
+      'ALL': 'All Packages',
+      'INTERNET': 'Internet',
+      'MINUTE': 'Minutes',
+      'COMBO': 'Combo / Bundle',
+      'SPECIAL': 'Special',
+      'CASHBACK': 'Cashback',
+    };
+
+    final categories = rawCatSet.map((catId) {
+      final nameBn = catNameBn[catId] ?? catId;
+      final nameEn = catNameEn[catId] ?? catId;
+      return {
+        'id': catId,
+        'name': app.isBn ? nameBn : nameEn,
+      };
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppColors.surface,

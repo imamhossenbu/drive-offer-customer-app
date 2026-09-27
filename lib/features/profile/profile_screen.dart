@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
 import '../../core/app_state.dart';
@@ -11,6 +13,99 @@ import '../wallet/transaction_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _handlePickProfileImage(BuildContext context) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+
+    try {
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        await CustomerApiService.instance.uploadProfileImage(bytes: bytes);
+      } else {
+        await CustomerApiService.instance.uploadProfileImage(path: picked.path);
+      }
+      if (!context.mounted) return;
+      await context.read<AppState>().fetchMe();
+      SoundService.playSuccess();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!'), backgroundColor: AppColors.success),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      SoundService.playError();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  void _showEditNameDialog(BuildContext context, AppState app) {
+    final nameCtrl = TextEditingController(text: app.userName);
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.edit, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(app.isBn ? 'নাম পরিবর্তন করুন' : 'Edit Name', style: const TextStyle(fontSize: 18)),
+              ],
+            ),
+            content: Form(
+              key: formKey,
+              child: TextFormField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  labelText: app.isBn ? 'আপনার নাম' : 'Full Name',
+                  prefixIcon: const Icon(Icons.person_outline),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'নাম লিখুন' : null,
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(app.isBn ? 'বাতিল' : 'Cancel')),
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setDialogState(() => isLoading = true);
+                        try {
+                          await CustomerApiService.instance.updateProfile(name: nameCtrl.text.trim());
+                          if (!ctx.mounted) return;
+                          await context.read<AppState>().fetchMe();
+                          Navigator.pop(ctx);
+                          SoundService.playSuccess();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('নাম সফলভাবে আপডেট হয়েছে!'), backgroundColor: AppColors.success),
+                          );
+                        } catch (e) {
+                          setDialogState(() => isLoading = false);
+                          SoundService.playError();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppColors.error),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                child: isLoading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(app.isBn ? 'সেভ করুন' : 'Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   void _showChangePinDialog(BuildContext context) {
     final currentPinCtrl = TextEditingController();
@@ -212,18 +307,77 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppColors.primary.withOpacity(0.12),
-                    child: Text(
-                      app.userName.isNotEmpty ? app.userName[0].toUpperCase() : 'U',
-                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary),
-                    ),
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 42,
+                        backgroundColor: AppColors.primary.withOpacity(0.12),
+                        backgroundImage: (app.user['avatar'] != null && app.user['avatar'].toString().isNotEmpty)
+                            ? NetworkImage(app.user['avatar'].toString())
+                            : (app.user['profilePic'] != null && app.user['profilePic'].toString().isNotEmpty)
+                                ? NetworkImage(app.user['profilePic'].toString())
+                                : null,
+                        child: (app.user['avatar'] == null && app.user['profilePic'] == null)
+                            ? Text(
+                                app.userName.isNotEmpty ? app.userName[0].toUpperCase() : 'U',
+                                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () => _handlePickProfileImage(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    app.userName.isNotEmpty ? app.userName : 'Customer Name',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        app.userName.isNotEmpty ? app.userName : 'Customer Name',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => _showEditNameDialog(context, app),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.edit_outlined,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
