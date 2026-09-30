@@ -21,41 +21,93 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool _isLoading = false;
+  bool _isLoadingGateways = true;
 
   final Map<String, Map<String, dynamic>> _gateways = {
     'BKASH': {
       'name': 'bKash (বিকাশ)',
       'color': const Color(0xFFE2136E),
-      'number': '01890000001',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
-      'icon': 'assets/images/bkash.png',
+      'icon': 'assets/payments/bkash.png',
     },
     'NAGAD': {
       'name': 'Nagad (নগদ)',
       'color': const Color(0xFFF7941D),
-      'number': '01890000002',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
-      'icon': 'assets/images/nagad.png',
+      'icon': 'assets/payments/nagad.png',
     },
     'ROCKET': {
       'name': 'Rocket (রকেট)',
       'color': const Color(0xFF8C3494),
-      'number': '01890000003',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
-      'icon': 'assets/images/rocket.png',
+      'icon': 'assets/payments/rocket.png',
     },
     'UPAY': {
       'name': 'Upay (উপায়)',
       'color': const Color(0xFF0047BA),
-      'number': '01890000004',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
-      'icon': 'assets/images/upay.png',
+      'icon': 'assets/payments/upay.png',
     },
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDynamicPaymentGateways();
+  }
+
+  Future<void> _loadDynamicPaymentGateways() async {
+    try {
+      final results = await Future.wait([
+        CustomerApiService.instance.getPaymentMethods(),
+        CustomerApiService.instance.getSettings(),
+      ]);
+
+      final pmRes = results[0];
+      final setRes = results[1];
+
+      // 1. Check active payment methods from payment-devices
+      final pmData = pmRes['data'] ?? pmRes;
+      final List pmList = pmData is List
+          ? pmData
+          : (pmData?['methods'] is List ? pmData['methods'] : (pmData?['data'] is List ? pmData['data'] : []));
+
+      for (final item in pmList) {
+        if (item is Map) {
+          final prov = (item['provider'] ?? item['paymentProvider'] ?? '').toString().toUpperCase();
+          final phone = (item['paymentNumber'] ?? item['phoneNumber'] ?? '').toString().trim();
+          if (prov.isNotEmpty && phone.isNotEmpty && _gateways.containsKey(prov)) {
+            _gateways[prov]!['number'] = phone;
+          }
+        }
+      }
+
+      // 2. Check fallbackPaymentNumbers in systemSettings
+      final setData = setRes['data'] ?? setRes;
+      if (setData is Map && setData['fallbackPaymentNumbers'] is Map) {
+        final fallbacks = setData['fallbackPaymentNumbers'] as Map;
+        fallbacks.forEach((k, v) {
+          final prov = k.toString().toUpperCase();
+          final phone = v?.toString().trim() ?? '';
+          if (_gateways.containsKey(prov) && (_gateways[prov]!['number'] as String).isEmpty && phone.isNotEmpty) {
+            _gateways[prov]!['number'] = phone;
+          }
+        });
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isLoadingGateways = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -65,6 +117,15 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   }
 
   void _copyToClipboard(String text) {
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('পেমেন্ট নম্বর এখনও সংযুক্ত করা হয়নি'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     Clipboard.setData(ClipboardData(text: text));
     SoundService.playTap();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -382,8 +443,16 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                                 style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                               ),
                               Text(
-                                currentGateway['number'] as String,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                (currentGateway['number'] as String).isNotEmpty
+                                    ? (currentGateway['number'] as String)
+                                    : (_isLoadingGateways
+                                        ? (app.isBn ? 'লোড হচ্ছে...' : 'Loading...')
+                                        : (app.isBn ? 'নম্বর উপলব্ধ নেই' : 'Not Available')),
+                                style: TextStyle(
+                                  fontSize: (currentGateway['number'] as String).isNotEmpty ? 18 : 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: (currentGateway['number'] as String).isNotEmpty ? AppColors.textPrimary : Colors.grey.shade600,
+                                ),
                               ),
                             ],
                           ),

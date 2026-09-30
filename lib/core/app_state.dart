@@ -36,12 +36,14 @@ class DriveOffer {
     final regPriceNum = (json['regularPrice'] ?? json['price'] ?? json['originalPrice'] ?? 0) as num;
     final sellPriceNum = (json['sellingPrice'] ?? json['discountPrice'] ?? regPriceNum) as num;
 
-    final regPrice = regPriceNum > 1000 ? regPriceNum / 100 : regPriceNum.toDouble();
-    final sellPrice = sellPriceNum > 1000 ? sellPriceNum / 100 : sellPriceNum.toDouble();
+    // Prices >= 10000 are in poisha (100 poisha = 1 BDT, e.g. 500 BDT = 50000 poisha)
+    final regPrice = regPriceNum >= 10000 ? regPriceNum / 100 : regPriceNum.toDouble();
+    final sellPrice = sellPriceNum >= 10000 ? sellPriceNum / 100 : sellPriceNum.toDouble();
 
-    final op = (json['operator'] is Map
-            ? (json['operator']['code'] ?? json['operator']['name'])
-            : (json['operator'] ?? json['operatorName'] ?? 'GP'))
+    final opRaw = json['operator'] ?? json['operatorId'];
+    final op = (opRaw is Map
+            ? (opRaw['code'] ?? opRaw['name'] ?? 'GP')
+            : (opRaw ?? json['operatorName'] ?? 'GP'))
         .toString()
         .toUpperCase();
 
@@ -245,7 +247,11 @@ class AppState extends ChangeNotifier {
       await syncFromStorage();
       await refreshAll();
     } else {
-      await fetchOffers();
+      _driveOffers = [];
+      _regularOffers = [];
+      _orders = [];
+      _transactions = [];
+      notifyListeners();
     }
   }
 
@@ -363,6 +369,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> fetchOffers() async {
+    if (!_isLoggedIn) {
+      _driveOffers = [];
+      _regularOffers = [];
+      _isLoadingOffers = false;
+      notifyListeners();
+      return;
+    }
     _isLoadingOffers = true;
     notifyListeners();
 
@@ -373,18 +386,31 @@ class AppState extends ChangeNotifier {
         CustomerApiService.instance.getOperators(),
       ]);
 
-      final dData = results[0]['data'];
-      final rData = results[1]['data'];
-      final opData = results[2]['data'];
+      List extractList(dynamic data) {
+        if (data == null) return [];
+        if (data is List) return data;
+        if (data is Map) {
+          if (data['docs'] is List) return data['docs'] as List;
+          if (data['data'] is List) return data['data'] as List;
+          if (data['items'] is List) return data['items'] as List;
+          if (data['offers'] is List) return data['offers'] as List;
+        }
+        return [];
+      }
 
-      final List dList = (dData is List ? dData : (dData?['docs'] is List ? dData['docs'] : []));
-      final List rList = (rData is List ? rData : (rData?['docs'] is List ? rData['docs'] : []));
+      final dData = results[0]['data'] ?? results[0];
+      final rData = results[1]['data'] ?? results[1];
+      final opData = results[2]['data'] ?? results[2];
+
+      final List dList = extractList(dData);
+      final List rList = extractList(rData);
+      final List opList = extractList(opData);
 
       _driveOffers = dList.map((e) => DriveOffer.fromJson(Map<String, dynamic>.from(e as Map))).toList();
       _regularOffers = rList.map((e) => DriveOffer.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
-      if (opData is List) {
-        _rawOperators = opData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (opList.isNotEmpty) {
+        _rawOperators = opList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
     } catch (_) {}
 
@@ -450,8 +476,13 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = false;
     _user = {};
     _balance = 0.0;
+    _totalAdded = 0.0;
+    _totalSpent = 0.0;
+    _driveOffers.clear();
+    _regularOffers.clear();
     _orders.clear();
     _transactions.clear();
+    _notifications.clear();
     notifyListeners();
   }
 

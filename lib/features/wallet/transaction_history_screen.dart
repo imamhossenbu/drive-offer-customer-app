@@ -68,19 +68,56 @@ class TransactionHistoryScreen extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Icon Badge
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isCredit ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-                            color: isCredit ? AppColors.success : AppColors.error,
-                            size: 20,
-                          ),
-                        ),
+                        // Icon Badge / Real Payment Logo
+                        () {
+                          final desc = '${tx.description} ${tx.type}'.toUpperCase();
+                          String? mfsAsset;
+                          if (desc.contains('BKASH') || desc.contains('বিকাশ')) {
+                            mfsAsset = 'assets/payments/bkash.png';
+                          } else if (desc.contains('NAGAD') || desc.contains('নগদ')) {
+                            mfsAsset = 'assets/payments/nagad.png';
+                          } else if (desc.contains('ROCKET') || desc.contains('রকেট')) {
+                            mfsAsset = 'assets/payments/rocket.png';
+                          } else if (desc.contains('UPAY') || desc.contains('উপায়') || desc.contains('উপায়')) {
+                            mfsAsset = 'assets/payments/upay.png';
+                          }
+
+                          if (mfsAsset != null) {
+                            return Container(
+                              width: 40,
+                              height: 40,
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.grey.shade300),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: Image.asset(mfsAsset, fit: BoxFit.contain),
+                              ),
+                            );
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isCredit ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                              color: isCredit ? AppColors.success : AppColors.error,
+                              size: 20,
+                            ),
+                          );
+                        }(),
                         const SizedBox(width: 14),
 
                         // Details

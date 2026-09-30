@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/sound_service.dart';
 import '../../core/widgets/balance_card.dart';
 import '../../core/widgets/offer_card.dart';
+import '../../core/widgets/operator_badge.dart';
 import '../../core/widgets/prayer_times_card.dart';
 import '../notifications/notifications_screen.dart';
 import '../offers/offer_detail_sheet.dart';
@@ -242,14 +243,42 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildOperatorSection(BuildContext context, AppState app) {
-    final operators = [
-      {'id': 'ALL', 'name': app.isBn ? 'সকল' : 'All', 'asset': null},
-      {'id': 'GP', 'name': 'GP', 'asset': 'assets/operators/gp.png'},
-      {'id': 'ROBI', 'name': 'Robi', 'asset': 'assets/operators/robi.png'},
-      {'id': 'BANGLALINK', 'name': 'BL', 'asset': 'assets/operators/banglalink.png'},
-      {'id': 'AIRTEL', 'name': 'Airtel', 'asset': 'assets/operators/airtel.png'},
-      {'id': 'TELETALK', 'name': 'Teletalk', 'asset': 'assets/operators/teletalk.png'},
+    final Map<String, String> defaultAssets = {
+      'GP': 'assets/operators/gp.png',
+      'ROBI': 'assets/operators/robi.png',
+      'BANGLALINK': 'assets/operators/banglalink.png',
+      'BL': 'assets/operators/banglalink.png',
+      'AIRTEL': 'assets/operators/airtel.png',
+      'TELETALK': 'assets/operators/teletalk.png',
+    };
+
+    final List<Map<String, dynamic>> operators = [
+      {'id': 'ALL', 'name': app.isBn ? 'সকল' : 'All', 'asset': null, 'logoUrl': null},
     ];
+
+    if (app.operators.isNotEmpty) {
+      for (final op in app.operators) {
+        final code = (op['code'] ?? '').toString().toUpperCase();
+        final name = (op['name'] ?? code).toString();
+        final logoUrl = op['logoUrl']?.toString();
+        final key = OperatorBadge.cleanKey(code.isNotEmpty ? code : name);
+        final asset = defaultAssets[code] ?? 'assets/operators/$key.png';
+        operators.add({
+          'id': code.isNotEmpty ? code : (op['id']?.toString() ?? name),
+          'name': name,
+          'asset': asset,
+          'logoUrl': logoUrl,
+        });
+      }
+    } else {
+      operators.addAll([
+        {'id': 'GP', 'name': 'GP', 'asset': 'assets/operators/gp.png', 'logoUrl': null},
+        {'id': 'ROBI', 'name': 'Robi', 'asset': 'assets/operators/robi.png', 'logoUrl': null},
+        {'id': 'BANGLALINK', 'name': 'BL', 'asset': 'assets/operators/banglalink.png', 'logoUrl': null},
+        {'id': 'AIRTEL', 'name': 'Airtel', 'asset': 'assets/operators/airtel.png', 'logoUrl': null},
+        {'id': 'TELETALK', 'name': 'Teletalk', 'asset': 'assets/operators/teletalk.png', 'logoUrl': null},
+      ]);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,6 +311,7 @@ class HomeScreen extends StatelessWidget {
               final op = operators[index];
               final isSelected = app.selectedOperator == op['id'];
               final asset = op['asset'] as String?;
+              final logoUrl = op['logoUrl'] as String?;
 
               return InkWell(
                 onTap: () {
@@ -306,7 +336,21 @@ class HomeScreen extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (asset != null) ...[
+                      if (logoUrl != null && logoUrl.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            logoUrl,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => asset != null
+                                ? Image.asset(asset, width: 24, height: 24, fit: BoxFit.contain)
+                                : const Icon(Icons.cell_tower, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ] else if (asset != null) ...[
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.asset(

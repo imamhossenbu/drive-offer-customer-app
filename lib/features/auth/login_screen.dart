@@ -84,6 +84,17 @@ class _LoginScreenState extends State<LoginScreen> {
     final state = context.watch<CustomerAppState>();
     final isBn = state.lang == 'bn';
 
+    if (state.isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const CustomerMain()),
+            (route) => false,
+          );
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(

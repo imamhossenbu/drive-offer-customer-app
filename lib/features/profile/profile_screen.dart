@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,13 +12,38 @@ import '../../core/sound_service.dart';
 import '../auth/login_screen.dart';
 import '../wallet/transaction_history_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
+  Timer? _progressTimer;
 
   Future<void> _handlePickProfileImage(BuildContext context) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked == null) return;
+
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.15;
+    });
+
+    // Simulate smooth progress ticks for visual percentage feedback
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_uploadProgress < 0.88) {
+          _uploadProgress += 0.08;
+        }
+      });
+    });
 
     try {
       if (kIsWeb) {
@@ -26,23 +52,56 @@ class ProfileScreen extends StatelessWidget {
       } else {
         await CustomerApiService.instance.uploadProfileImage(path: picked.path);
       }
-      if (!context.mounted) return;
+
+      _progressTimer?.cancel();
+      if (!mounted) return;
+
+      setState(() {
+        _uploadProgress = 1.0;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+
       await context.read<AppState>().fetchMe();
+      setState(() {
+        _isUploading = false;
+        _uploadProgress = 0.0;
+      });
+
       SoundService.playSuccess();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!'), backgroundColor: AppColors.success),
+        const SnackBar(
+          content: Text('প্রোফাইল ছবি সফলভাবে আপডেট হয়েছে!'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
-      if (!context.mounted) return;
+      _progressTimer?.cancel();
+      if (!mounted) return;
+      setState(() {
+        _isUploading = false;
+        _uploadProgress = 0.0;
+      });
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }
 
-  void _showEditNameDialog(BuildContext context, AppState app) {
+  @override
+  void dispose() {
+    _progressTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showEditProfileDialog(BuildContext context, AppState app) {
     final nameCtrl = TextEditingController(text: app.userName);
+    final phoneCtrl = TextEditingController(text: app.userPhone);
     final formKey = GlobalKey<FormState>();
     bool isLoading = false;
 
@@ -56,18 +115,45 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.edit, color: AppColors.primary),
                 const SizedBox(width: 8),
-                Text(app.isBn ? 'নাম পরিবর্তন করুন' : 'Edit Name', style: const TextStyle(fontSize: 18)),
+                Text(app.isBn ? 'প্রোফাইল পরিবর্তন করুন' : 'Edit Profile', style: const TextStyle(fontSize: 18)),
               ],
             ),
             content: Form(
               key: formKey,
-              child: TextFormField(
-                controller: nameCtrl,
-                decoration: InputDecoration(
-                  labelText: app.isBn ? 'আপনার নাম' : 'Full Name',
-                  prefixIcon: const Icon(Icons.person_outline),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(
+                        labelText: app.isBn ? 'আপনার নাম' : 'Full Name',
+                        prefixIcon: const Icon(Icons.person_outline),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty ? (app.isBn ? 'নাম লিখুন' : 'Enter name') : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: app.isBn ? 'মোবাইল নম্বর' : 'Phone Number',
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        hintText: '01XXXXXXXXX',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return app.isBn ? 'মোবাইল নম্বর লিখুন' : 'Enter phone number';
+                        }
+                        final clean = v.trim().replaceAll(RegExp(r'[^0-9]'), '');
+                        if (clean.length < 11) {
+                          return app.isBn ? 'সঠিক ১১ ডিজিটের নম্বর দিন' : 'Enter valid 11-digit phone';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                validator: (v) => v == null || v.trim().isEmpty ? 'নাম লিখুন' : null,
               ),
             ),
             actions: [
@@ -79,13 +165,19 @@ class ProfileScreen extends StatelessWidget {
                         if (!formKey.currentState!.validate()) return;
                         setDialogState(() => isLoading = true);
                         try {
-                          await CustomerApiService.instance.updateProfile(name: nameCtrl.text.trim());
+                          await CustomerApiService.instance.updateMe(
+                            name: nameCtrl.text.trim(),
+                            phone: phoneCtrl.text.trim(),
+                          );
                           if (!ctx.mounted) return;
                           await context.read<AppState>().fetchMe();
                           Navigator.pop(ctx);
                           SoundService.playSuccess();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('নাম সফলভাবে আপডেট হয়েছে!'), backgroundColor: AppColors.success),
+                            SnackBar(
+                              content: Text(app.isBn ? 'প্রোফাইল সফলভাবে আপডেট হয়েছে!' : 'Profile updated successfully!'),
+                              backgroundColor: AppColors.success,
+                            ),
                           );
                         } catch (e) {
                           setDialogState(() => isLoading = false);
@@ -256,7 +348,7 @@ class ProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await AuthStorage.clearAuth();
+              await context.read<AppState>().logout();
               if (!context.mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
@@ -275,6 +367,12 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+
+    final rawAvatarUrl = app.user['profileImageUrl']?.toString() ??
+        app.user['avatar']?.toString() ??
+        app.user['profilePic']?.toString();
+
+    final avatarUrl = (rawAvatarUrl != null && rawAvatarUrl.isNotEmpty) ? rawAvatarUrl : null;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -308,48 +406,78 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Stack(
+                    alignment: Alignment.center,
                     children: [
                       CircleAvatar(
-                        radius: 42,
+                        radius: 46,
                         backgroundColor: AppColors.primary.withOpacity(0.12),
-                        backgroundImage: (app.user['avatar'] != null && app.user['avatar'].toString().isNotEmpty)
-                            ? NetworkImage(app.user['avatar'].toString())
-                            : (app.user['profilePic'] != null && app.user['profilePic'].toString().isNotEmpty)
-                                ? NetworkImage(app.user['profilePic'].toString())
-                                : null,
-                        child: (app.user['avatar'] == null && app.user['profilePic'] == null)
+                        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                        child: avatarUrl == null
                             ? Text(
                                 app.userName.isNotEmpty ? app.userName[0].toUpperCase() : 'U',
-                                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primary),
                               )
                             : null,
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => _handlePickProfileImage(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 4,
+                      if (_isUploading)
+                        Container(
+                          width: 92,
+                          height: 92,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: CircularProgressIndicator(
+                                  value: _uploadProgress,
+                                  color: Colors.white,
+                                  strokeWidth: 3,
                                 ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              size: 16,
-                              color: Colors.white,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${(_uploadProgress * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (!_isUploading)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () => _handlePickProfileImage(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.18),
+                                    blurRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 16,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -362,7 +490,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       InkWell(
-                        onTap: () => _showEditNameDialog(context, app),
+                        onTap: () => _showEditProfileDialog(context, app),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.all(4),
@@ -380,9 +508,25 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    app.userPhone.isNotEmpty ? app.userPhone : 'No phone',
-                    style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  InkWell(
+                    onTap: () => _showEditProfileDialog(context, app),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.phone_android, size: 14, color: AppColors.textSecondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            app.userPhone.isNotEmpty ? app.userPhone : (app.isBn ? 'ফোন নম্বর যোগ করুন' : 'Add phone number'),
+                            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.edit, size: 12, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
                   ),
                   if (app.userEmail.isNotEmpty) ...[
                     const SizedBox(height: 2),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'core/auth_storage.dart';
 import 'core/app_state.dart';
 import 'core/constants.dart';
 import 'features/auth/login_screen.dart';
@@ -10,6 +11,7 @@ import 'features/customer_main.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AuthStorage.init();
   runApp(const CustomerApp());
 }
 
@@ -40,6 +42,22 @@ class CustomerApp extends StatelessWidget {
           ).apply(
             bodyColor: AppColors.textPrimary,
             displayColor: AppColors.textPrimary,
+          ),
+          dialogTheme: DialogThemeData(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            elevation: 12,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+          ),
+          bottomSheetTheme: const BottomSheetThemeData(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            elevation: 16,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
           ),
           appBarTheme: const AppBarTheme(
             backgroundColor: AppColors.primary,

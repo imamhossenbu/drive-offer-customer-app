@@ -331,28 +331,34 @@ class CustomerApiService {
 
   Future<Map<String, dynamic>> getDriveOffers({String? operator, String? category}) async {
     final params = <String, String>{};
-    if (operator != null && operator != 'ALL') params['operator'] = operator;
+    if (operator != null && operator != 'ALL') {
+      params['operator'] = operator;
+      params['operatorId'] = operator;
+    }
     if (category != null && category != 'ALL') params['category'] = category;
 
     final uri = Uri.parse('$_baseUrl/drive-offers').replace(queryParameters: params.isEmpty ? null : params);
-    final res = await http.get(uri, headers: _headers(withAuth: false));
+    final res = await http.get(uri, headers: _headers());
     return _parse(res);
   }
 
   Future<Map<String, dynamic>> getRegularOffers({String? operator, String? category}) async {
     final params = <String, String>{};
-    if (operator != null && operator != 'ALL') params['operator'] = operator;
+    if (operator != null && operator != 'ALL') {
+      params['operator'] = operator;
+      params['operatorId'] = operator;
+    }
     if (category != null && category != 'ALL') params['category'] = category;
 
     final uri = Uri.parse('$_baseUrl/offers').replace(queryParameters: params.isEmpty ? null : params);
-    final res = await http.get(uri, headers: _headers(withAuth: false));
+    final res = await http.get(uri, headers: _headers());
     return _parse(res);
   }
 
   Future<Map<String, dynamic>> getOperators() async {
     final res = await http.get(
       Uri.parse('$_baseUrl/operators'),
-      headers: _headers(withAuth: false),
+      headers: _headers(),
     );
     return _parse(res);
   }
@@ -389,7 +395,15 @@ class CustomerApiService {
   Future<Map<String, dynamic>> getPaymentMethods() async {
     final res = await http.get(
       Uri.parse('$_baseUrl/payment-methods'),
-      headers: _headers(withAuth: false),
+      headers: _headers(),
+    );
+    return _parse(res);
+  }
+
+  Future<Map<String, dynamic>> getSettings() async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/settings'),
+      headers: _headers(),
     );
     return _parse(res);
   }

@@ -4,6 +4,7 @@ import '../../core/app_state.dart';
 import '../../core/constants.dart';
 import '../../core/sound_service.dart';
 import '../../core/widgets/offer_card.dart';
+import '../../core/widgets/operator_badge.dart';
 import 'offer_detail_sheet.dart';
 
 class OffersScreen extends StatefulWidget {
@@ -35,14 +36,40 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
 
-    final operators = [
-      {'id': 'ALL', 'name': app.isBn ? 'সকল' : 'All'},
-      {'id': 'GP', 'name': 'GP'},
-      {'id': 'ROBI', 'name': 'Robi'},
-      {'id': 'BANGLALINK', 'name': 'BL'},
-      {'id': 'AIRTEL', 'name': 'Airtel'},
-      {'id': 'TELETALK', 'name': 'Teletalk'},
+    final Map<String, String> defaultAssets = {
+      'GP': 'assets/operators/gp.png',
+      'ROBI': 'assets/operators/robi.png',
+      'BANGLALINK': 'assets/operators/banglalink.png',
+      'BL': 'assets/operators/banglalink.png',
+      'AIRTEL': 'assets/operators/airtel.png',
+      'TELETALK': 'assets/operators/teletalk.png',
+    };
+
+    final List<Map<String, dynamic>> operators = [
+      {'id': 'ALL', 'name': app.isBn ? 'সকল' : 'All', 'asset': null, 'logoUrl': null},
     ];
+
+    if (app.operators.isNotEmpty) {
+      for (final op in app.operators) {
+        final code = (op['code'] ?? '').toString().toUpperCase();
+        final name = (op['name'] ?? code).toString();
+        final key = OperatorBadge.cleanKey(code.isNotEmpty ? code : name);
+        operators.add({
+          'id': code.isNotEmpty ? code : (op['id']?.toString() ?? name),
+          'name': name,
+          'asset': defaultAssets[code] ?? 'assets/operators/$key.png',
+          'logoUrl': op['logoUrl']?.toString(),
+        });
+      }
+    } else {
+      operators.addAll([
+        {'id': 'GP', 'name': 'GP', 'asset': 'assets/operators/gp.png', 'logoUrl': null},
+        {'id': 'ROBI', 'name': 'Robi', 'asset': 'assets/operators/robi.png', 'logoUrl': null},
+        {'id': 'BANGLALINK', 'name': 'BL', 'asset': 'assets/operators/banglalink.png', 'logoUrl': null},
+        {'id': 'AIRTEL', 'name': 'Airtel', 'asset': 'assets/operators/airtel.png', 'logoUrl': null},
+        {'id': 'TELETALK', 'name': 'Teletalk', 'asset': 'assets/operators/teletalk.png', 'logoUrl': null},
+      ]);
+    }
 
     // Dynamic Category Extraction based on actual offers data
     final Set<String> rawCatSet = {'ALL'};
@@ -151,6 +178,8 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                     itemBuilder: (ctx, index) {
                       final op = operators[index];
                       final isSelected = app.selectedOperator == op['id'];
+                      final asset = op['asset'] as String?;
+                      final logoUrl = op['logoUrl'] as String?;
 
                       return InkWell(
                         onTap: () {
@@ -159,23 +188,50 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                         },
                         borderRadius: BorderRadius.circular(18),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : AppColors.surface,
+                            color: isSelected ? AppColors.primary : Colors.white,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: isSelected ? AppColors.primary : Colors.grey.shade300,
                             ),
+                            boxShadow: isSelected
+                                ? [BoxShadow(color: AppColors.primary.withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 2))]
+                                : null,
                           ),
-                          child: Center(
-                            child: Text(
-                              op['name']!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                color: isSelected ? Colors.white : AppColors.textPrimary,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (logoUrl != null && logoUrl.isNotEmpty) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(9),
+                                  child: Image.network(
+                                    logoUrl,
+                                    width: 18,
+                                    height: 18,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => asset != null
+                                        ? Image.asset(asset, width: 18, height: 18, fit: BoxFit.contain)
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ] else if (asset != null) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(9),
+                                  child: Image.asset(asset, width: 18, height: 18, fit: BoxFit.contain),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Text(
+                                op['name']!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       );

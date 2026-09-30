@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
+import '../../core/auth_storage.dart';
 import '../../core/constants.dart';
 import '../customer_main.dart';
 import 'login_screen.dart';
@@ -35,11 +36,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       try {
         final state = Provider.of<AppState>(context, listen: false);
-        if (state.isLoggedIn) {
+        if (state.isLoggedIn || AuthStorage.isLoggedIn) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const CustomerMain()),
           );
@@ -49,9 +50,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           );
         }
       } catch (e) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+        if (AuthStorage.isLoggedIn) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const CustomerMain()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
       }
     });
   }

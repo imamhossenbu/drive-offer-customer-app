@@ -8,6 +8,7 @@ import 'offers/offers_screen.dart';
 import 'wallet/add_money_screen.dart';
 import 'orders/orders_screen.dart';
 import 'profile/profile_screen.dart';
+import 'auth/login_screen.dart';
 
 class CustomerMain extends StatefulWidget {
   final int initialTab;
@@ -25,8 +26,10 @@ class _CustomerMainState extends State<CustomerMain> {
     super.initState();
     _currentIndex = widget.initialTab;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppState>().syncFromStorage();
-      context.read<AppState>().refreshAll();
+      if (context.read<AppState>().isLoggedIn) {
+        context.read<AppState>().syncFromStorage();
+        context.read<AppState>().refreshAll();
+      }
     });
   }
 
@@ -40,6 +43,20 @@ class _CustomerMainState extends State<CustomerMain> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+
+    if (!app.isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     final screens = [
       HomeScreen(onNavigateTab: _onTabSelected),
