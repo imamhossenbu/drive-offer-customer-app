@@ -47,7 +47,60 @@ A state-of-the-art mobile and web application built with **Flutter** for browsin
 
 ---
 
-## 🏗️ আর্কিটেকচার ও ডেটা ফ্লো (System Architecture)
+## 🏗️ আর্কিটেকচার ও ডেটা ফ্লো (System Architecture & Workflows)
+
+### ক. গ্রাহক অ্যাপ্লিকেশনের মডিউলার আর্কিটেকচার (Module Flowchart)
+
+```mermaid
+flowchart TB
+    %% Styling Palette
+    classDef authStyle fill:#EEF2FF,stroke:#6366F1,stroke-width:2px,color:#1E1B4B,rx:8,ry:8;
+    classDef homeStyle fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#14532D,rx:8,ry:8;
+    classDef walletStyle fill:#FEFCE8,stroke:#CA8A04,stroke-width:2px,color:#713F12,rx:8,ry:8;
+    classDef orderStyle fill:#FAF5FF,stroke:#9333EA,stroke-width:2px,color:#581C87,rx:8,ry:8;
+    classDef backendStyle fill:#F8FAFC,stroke:#0F172A,stroke-width:2px,color:#0F172A,rx:8,ry:8;
+
+    subgraph User_Journey ["গ্রাহক অ্যাপ্লিকেশনের মূল মডিউলসমূহ"]
+        direction TB
+
+        subgraph Mod_Auth ["১. স্মার্ট কেওয়াইসি ও নিরাপত্তা"]
+            AUTH_KYC["🪪 NID কার্ড আপলোড\n(লোকাল OCR প্রসেসিং)"]:::authStyle
+            AUTH_PIN["🔒 ৪-ডিজিট পিন ও OTP\n(অ্যাকাউন্ট ভেরিফিকেশন)"]:::authStyle
+        end
+
+        subgraph Mod_Home ["২. হোম ও ড্যাশবোর্ড"]
+            HOME_BAL["👁️ ট্যাপ-টু-রিভিল ব্যালেন্স\n(প্রাইভেসি অ্যানিমেশন)"]:::homeStyle
+            HOME_PRAYER["🕌 দৈনিক নামাজের সময়সূচী\n(লাইভ ওয়াক্ত টাইমিং)"]:::homeStyle
+            HOME_BANNER["🏷️ ট্রেন্ডিং ড্রাইভ অফার স্লাইডার\n(ক্যাশব্যাক ও ডিসকাউন্ট)"]:::homeStyle
+        end
+
+        subgraph Mod_Wallet ["৩. ব্যালেন্স রিচার্জ (অ্যাড মানি)"]
+            TOPUP_CHOOSE["💳 MFS গেটওয়ে নির্বাচন\n(bKash / Nagad / Rocket)"]:::walletStyle
+            TOPUP_TRX["⚡ TrxID সাবমিশন\n(স্বয়ংক্রিয় এসএমএস ভেরিফিকেশন)"]:::walletStyle
+        end
+
+        subgraph Mod_Orders ["৪. অফার ক্রয় ও ট্র্যাকিং"]
+            PACK_SELECT["📶 অপারেটর ও প্যাক ব্রাউজিং\n(স্মার্ট প্রিফিক্স ডিটেকশন)"]:::orderStyle
+            PACK_CONFIRM["🔐 পিন কনফার্মেশন বটমশীট\n(ওয়ালেট লেজার ডিডাকশন)"]:::orderStyle
+            PACK_TRACK["📊 লাইভ স্ট্যাটাস ট্র্যাকিং\n(Pending → Complete / Auto-Refund)"]:::orderStyle
+        end
+    end
+
+    subgraph Backend_Cloud ["ক্লাউড ব্যাকএন্ড ইঞ্জিন"]
+        BACKEND_API["🚀 Alokito Telecom Backend API\n(ACID Poisha Ledger, SMS Normalizer, Socket.io)"]:::backendStyle
+    end
+
+    AUTH_PIN --> HOME_BAL
+    HOME_BAL --> TOPUP_CHOOSE
+    HOME_BAL --> PACK_SELECT
+
+    TOPUP_TRX ==>|লাইভ ভেরিফিকেশন| BACKEND_API
+    PACK_CONFIRM ==>|ইনস্ট্যান্ট প্যাক অর্ডার| BACKEND_API
+    BACKEND_API -.->|রিয়েল-টাইম ব্যালেন্স আপডেট| HOME_BAL
+    BACKEND_API -.->|অর্ডার কমপ্লিট / রিফান্ড নোটিফিকেশন| PACK_TRACK
+```
+
+### খ. অটো-টপআপ ও ড্রাইভ অফার লাইফসাইকেল (Sequence Flow)
 
 ```mermaid
 sequenceDiagram
