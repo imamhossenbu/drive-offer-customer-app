@@ -31,7 +31,7 @@ A state-of-the-art mobile and web application built with **Flutter** for browsin
 * 📶 **সকল প্রধান অপারেটর সাপোর্ট:** গ্রামীণফোন (GP), রবি (Robi), বাংলালিংক (Banglalink), এয়ারটেল (Airtel), টেলিটক (Teletalk)।
 * 📂 **ক্যাটাগরি ফিল্টারিং:** All, Internet, Minutes, Combo এবং Special Drive Offers।
 * 🔍 **স্মার্ট সার্চ ও ফিল্টার:** ডাটার পরিমাণ (GB), ভ্যালিডিটি (দিন) বা টাকার অঙ্ক অনুযায়ী তাৎক্ষণিক ফিল্টারিং।
-* 🎯 **স্মার্ট নম্বর প্রিফিক্স ডিটেকশন:** প্রাপকের মোবাইল নাম্বার টাইপ করার সাথে সাথে অপারেটরের সাথে স্বয়ংক্রিয় মিল যাচাই (যেমন: `017`/`013` $\rightarrow$ GP, `018` $\rightarrow$ Robi, `019`/`014` $\rightarrow$ BL, `016` $\rightarrow$ Airtel, `015` $\rightarrow$ Teletalk)।
+* 🎯 **স্মার্ট নম্বর প্রিফিক্স ডিটেকশন:** প্রাপকের মোবাইল নাম্বার টাইপ করার সাথে সাথে অপারেটরের সাথে স্বয়ংক্রিয় মিল যাচাই (যেমন: `017`/`013` → GP, `018` → Robi, `019`/`014` → BL, `016` → Airtel, `015` → Teletalk)।
 * 🔒 **পিন কনফার্মেশন বটমশীট:** অসাবধানতাবশত ভুল অর্ডার এড়াতে অর্ডার প্লেসমেন্টের আগে পিন দিয়ে কনফার্ম করার সুবিধা।
 
 ### ৪. স্বয়ংক্রিয় অ্যাড মানি (Automated Add Money / Top-Up)
@@ -40,7 +40,7 @@ A state-of-the-art mobile and web application built with **Flutter** for browsin
 * ⚡ **লাইভ TrxID ভেরিফিকেশন:** পেমেন্ট করার পর গ্রাহক TrxID সাবমিট করলেই ব্যাকএন্ড এসএমএস লিসেনারের তথ্যের সাথে স্বয়ংক্রিয়ভাবে মিলিয়ে চোখের পলকে ওয়ালেটে ব্যালেন্স যোগ করে দেয়। কোনো অ্যাডমিন কনফার্মেশনের জন্য অপেক্ষা করতে হয় না।
 
 ### ৫. অর্ডার ও ওয়ালেট লেজার হিস্ট্রি (Live Orders & Ledger History)
-* 📊 **লাইভ অর্ডার ট্র্যাকিং:** `পেন্ডিং (Pending)` $\rightarrow$ `প্রসেসিং (Processing)` $\rightarrow$ `সফল (Completed)` / `ব্যর্থ (Failed)`।
+* 📊 **লাইভ অর্ডার ট্র্যাকিং:** `পেন্ডিং (Pending)` → `প্রসেসিং (Processing)` → `সফল (Completed)` / `ব্যর্থ (Failed)`।
 * 💰 **অটো-রিফান্ড সুবিধা:** অ্যাডমিন কোনো কারণে অর্ডার ফেইল বা বাতিল করলে ব্যাকএন্ডের ACID লেনদেনের মাধ্যমে সাথে সাথে গ্রাহকের ওয়ালেটে টাকা রিফান্ড হয়ে যায়।
 * 📒 **ডাবল-এন্ট্রি ওয়ালেট স্টেটমেন্ট:** রিচার্জ, অফার পারচেজ, রিফান্ডের প্রতিটি ট্রানজেকশনের পূর্বে ও পরের ব্যালেন্সের নিখুঁত হিসাব।
 * 🔔 **ইন-অ্যাপ নোটিফিকেশন সেন্টার:** ওয়ালেট ক্রেডিট এবং অফার এক্টিভেশনের সাথে সাথে পুশ অ্যালার্ট।
@@ -52,18 +52,18 @@ A state-of-the-art mobile and web application built with **Flutter** for browsin
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Customer as 📱 গ্রাহক (Customer App)
+    actor Customer as 📱 গ্রাহক
     participant Backend as 🚀 Alokito Backend API
     actor Admin as 👑 অ্যাডমিন প্যানেল
-    participant Listener as 📲 SMS Listener ডিভাইস
+    participant Listener as 📲 SMS Listener
     actor MFS as 💳 বিকাশ / নগদ / রকেট
 
     Note over Customer, MFS: ১. স্বয়ংক্রিয় অ্যাড মানি (Top-Up) ফ্লো
-    Customer->>MFS: ক্যাশ-আউট / সেন্ড মানি করেন
+    Customer->>MFS: ক্যাশ-আউট বা সেন্ড মানি করেন
     MFS-->>Customer: TrxID সহ সফল এসএমএস প্রদান করে
     MFS-->>Listener: পেমেন্ট রিসিভ কনফার্মেশন এসএমএস পাঠায়
     Listener->>Backend: রিসিভ করা এসএমএস আপলোড করে (/sms-events)
-    Customer->>Backend: অ্যাপ থেকে TrxID সাবমিট করেন (/wallet/topups/:id/verify)
+    Customer->>Backend: অ্যাপ থেকে TrxID সাবমিট করেন
     Backend->>Backend: এসএমএস ডেটার সাথে TrxID ও অ্যামাউন্ট মিলিয়ে যাচাই করে
     Backend-->>Customer: ওয়ালেট ব্যালেন্স ইনস্ট্যান্ট ক্রেডিট ও নোটিফিকেশন প্রদান
 
@@ -75,7 +75,7 @@ sequenceDiagram
         Admin->>Backend: সিম থেকে প্যাক দিয়ে Complete মার্ক করেন
         Backend-->>Customer: অর্ডার সফল নোটিফিকেশন
     else কোনো কারণে ব্যর্থ
-        Admin->>Backend: Fail / Cancel মার্ক করেন (কারণ উল্লেখপূর্বক)
+        Admin->>Backend: Fail / Cancel মার্ক করেন
         Backend->>Backend: ওয়ালেটে সম্পূর্ণ টাকা সাথে সাথে রিফান্ড ক্রেডিট করে
         Backend-->>Customer: টাকা রিফান্ডের নোটিফিকেশন পাঠায়
     end
