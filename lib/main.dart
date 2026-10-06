@@ -37,9 +37,9 @@ class CustomerApp extends StatelessWidget {
             secondary: AppColors.secondary,
             surface: AppColors.surface,
           ),
-          textTheme: GoogleFonts.hindSiliguriTextTheme(
-            Theme.of(context).textTheme,
-          ).apply(
+          fontFamily: 'Bornomala',
+          textTheme: Theme.of(context).textTheme.apply(
+            fontFamily: 'Bornomala',
             bodyColor: AppColors.textPrimary,
             displayColor: AppColors.textPrimary,
           ),

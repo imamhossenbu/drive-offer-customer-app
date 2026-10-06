@@ -1,7 +1,7 @@
 name: drive_offer_customer_app
 description: "Alokito Telecom - Customer Mobile App (Drive Offers, Instant Recharge & Wallet)"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.11.4
@@ -28,5 +28,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/fonts/
     - assets/operators/
     - assets/payments/
+  fonts:
+    - family: Bornomala
+      fonts:
+        - asset: assets/fonts/Bornomala-Regular.ttf
+        - asset: assets/fonts/Bornomala-Bold.ttf
+          weight: 700
