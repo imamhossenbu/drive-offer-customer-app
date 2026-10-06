@@ -425,49 +425,53 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                       style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${currentGateway['name']} Number',
-                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                              ),
-                              Text(
-                                (currentGateway['number'] as String).isNotEmpty
-                                    ? (currentGateway['number'] as String)
-                                    : (_isLoadingGateways
-                                        ? (app.isBn ? 'লোড হচ্ছে...' : 'Loading...')
-                                        : (app.isBn ? 'নম্বর উপলব্ধ নেই' : 'Not Available')),
-                                style: TextStyle(
-                                  fontSize: (currentGateway['number'] as String).isNotEmpty ? 18 : 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: (currentGateway['number'] as String).isNotEmpty ? AppColors.textPrimary : Colors.grey.shade600,
+                    InkWell(
+                      onTap: () => _copyToClipboard(currentGateway['number'] as String),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${currentGateway['name']} Number',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                                 ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () => _copyToClipboard(currentGateway['number'] as String),
-                            icon: const Icon(Icons.copy, size: 16),
-                            label: Text(app.isBn ? 'কপি' : 'Copy'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: currentGateway['color'] as Color,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                Text(
+                                  (currentGateway['number'] as String).isNotEmpty
+                                      ? (currentGateway['number'] as String)
+                                      : (_isLoadingGateways
+                                          ? (app.isBn ? 'লোড হচ্ছে...' : 'Loading...')
+                                          : (app.isBn ? 'নম্বর উপলব্ধ নেই' : 'Not Available')),
+                                  style: TextStyle(
+                                    fontSize: (currentGateway['number'] as String).isNotEmpty ? 18 : 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: (currentGateway['number'] as String).isNotEmpty ? AppColors.textPrimary : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            ElevatedButton.icon(
+                              onPressed: () => _copyToClipboard(currentGateway['number'] as String),
+                              icon: const Icon(Icons.copy, size: 16),
+                              label: Text(app.isBn ? 'কপি' : 'Copy'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: currentGateway['color'] as Color,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
