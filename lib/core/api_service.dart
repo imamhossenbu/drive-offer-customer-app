@@ -401,9 +401,19 @@ class CustomerApiService {
   }
 
   Future<Map<String, dynamic>> getSettings() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/settings/public'),
+        headers: _headers(withAuth: false),
+      );
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return _parse(res);
+      }
+    } catch (_) {}
+
     final res = await http.get(
       Uri.parse('$_baseUrl/settings'),
-      headers: _headers(),
+      headers: _headers(withAuth: false),
     );
     return _parse(res);
   }

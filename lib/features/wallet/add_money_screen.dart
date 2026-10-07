@@ -27,7 +27,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     'BKASH': {
       'name': 'bKash (বিকাশ)',
       'color': const Color(0xFFE2136E),
-      'number': '',
+      'number': '01854747202',
       'type': 'Send Money (Personal)',
       'fee': '0%',
       'icon': 'assets/payments/bkash.png',
@@ -35,7 +35,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     'NAGAD': {
       'name': 'Nagad (নগদ)',
       'color': const Color(0xFFF7941D),
-      'number': '',
+      'number': '01854747202',
       'type': 'Send Money (Personal)',
       'fee': '0%',
       'icon': 'assets/payments/nagad.png',
@@ -43,7 +43,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     'ROCKET': {
       'name': 'Rocket (রকেট)',
       'color': const Color(0xFF8C3494),
-      'number': '',
+      'number': '01854747202',
       'type': 'Send Money (Personal)',
       'fee': '0%',
       'icon': 'assets/payments/rocket.png',
@@ -67,8 +67,14 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   Future<void> _loadDynamicPaymentGateways() async {
     try {
       final results = await Future.wait([
-        CustomerApiService.instance.getPaymentMethods(),
-        CustomerApiService.instance.getSettings(),
+        CustomerApiService.instance.getPaymentMethods().catchError((e) {
+          debugPrint('getPaymentMethods error: $e');
+          return <String, dynamic>{};
+        }),
+        CustomerApiService.instance.getSettings().catchError((e) {
+          debugPrint('getSettings error: $e');
+          return <String, dynamic>{};
+        }),
       ]);
 
       final pmRes = results[0];
@@ -82,7 +88,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
 
       for (final item in pmList) {
         if (item is Map) {
-          final prov = (item['provider'] ?? item['paymentProvider'] ?? '').toString().toUpperCase();
+          final prov = (item['provider'] ?? item['paymentProvider'] ?? '').toString().toUpperCase().trim();
           final phone = (item['paymentNumber'] ?? item['phoneNumber'] ?? '').toString().trim();
           if (prov.isNotEmpty && phone.isNotEmpty && _gateways.containsKey(prov)) {
             _gateways[prov]!['number'] = phone;
@@ -95,14 +101,18 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       if (setData is Map && setData['fallbackPaymentNumbers'] is Map) {
         final fallbacks = setData['fallbackPaymentNumbers'] as Map;
         fallbacks.forEach((k, v) {
-          final prov = k.toString().toUpperCase();
+          final prov = k.toString().toUpperCase().trim();
           final phone = v?.toString().trim() ?? '';
-          if (_gateways.containsKey(prov) && (_gateways[prov]!['number'] as String).isEmpty && phone.isNotEmpty) {
-            _gateways[prov]!['number'] = phone;
+          if (_gateways.containsKey(prov) && phone.isNotEmpty) {
+            if ((_gateways[prov]!['number'] as String).isEmpty) {
+              _gateways[prov]!['number'] = phone;
+            }
           }
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error loading dynamic payment gateways: $e');
+    }
 
     if (mounted) {
       setState(() => _isLoadingGateways = false);
