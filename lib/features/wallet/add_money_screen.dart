@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -23,11 +24,13 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   bool _isLoading = false;
   bool _isLoadingGateways = true;
 
+  Timer? _autoRefreshTimer;
+
   final Map<String, Map<String, dynamic>> _gateways = {
     'BKASH': {
       'name': 'bKash (বিকাশ)',
       'color': const Color(0xFFE2136E),
-      'number': '01854747202',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
       'icon': 'assets/payments/bkash.png',
@@ -35,7 +38,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     'NAGAD': {
       'name': 'Nagad (নগদ)',
       'color': const Color(0xFFF7941D),
-      'number': '01854747202',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
       'icon': 'assets/payments/nagad.png',
@@ -43,7 +46,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     'ROCKET': {
       'name': 'Rocket (রকেট)',
       'color': const Color(0xFF8C3494),
-      'number': '01854747202',
+      'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
       'icon': 'assets/payments/rocket.png',
@@ -62,9 +65,15 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   void initState() {
     super.initState();
     _loadDynamicPaymentGateways();
+    // Real-time polling: auto-check every 3 seconds so changes from listener app reflect immediately
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        _loadDynamicPaymentGateways(isSilent: true);
+      }
+    });
   }
 
-  Future<void> _loadDynamicPaymentGateways() async {
+  Future<void> _loadDynamicPaymentGateways({bool isSilent = false}) async {
     try {
       final results = await Future.wait([
         CustomerApiService.instance.getPaymentMethods().catchError((e) {
@@ -80,18 +89,26 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       final pmRes = results[0];
       final setRes = results[1];
 
-      // 1. Check active payment methods from payment-devices
+      bool changed = false;
+
+      // 1. Check active payment methods from payment-devices (highest priority: connected phone)
       final pmData = pmRes['data'] ?? pmRes;
       final List pmList = pmData is List
           ? pmData
           : (pmData?['methods'] is List ? pmData['methods'] : (pmData?['data'] is List ? pmData['data'] : []));
+
+      final Set<String> updatedProviders = {};
 
       for (final item in pmList) {
         if (item is Map) {
           final prov = (item['provider'] ?? item['paymentProvider'] ?? '').toString().toUpperCase().trim();
           final phone = (item['paymentNumber'] ?? item['phoneNumber'] ?? '').toString().trim();
           if (prov.isNotEmpty && phone.isNotEmpty && _gateways.containsKey(prov)) {
-            _gateways[prov]!['number'] = phone;
+            if (_gateways[prov]!['number'] != phone) {
+              _gateways[prov]!['number'] = phone;
+              changed = true;
+            }
+            updatedProviders.add(prov);
           }
         }
       }
@@ -104,23 +121,32 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
           final prov = k.toString().toUpperCase().trim();
           final phone = v?.toString().trim() ?? '';
           if (_gateways.containsKey(prov) && phone.isNotEmpty) {
-            if ((_gateways[prov]!['number'] as String).isEmpty) {
-              _gateways[prov]!['number'] = phone;
+            // Update if pmList didn't provide a number or if currently empty
+            if (!updatedProviders.contains(prov) || (_gateways[prov]!['number'] as String).isEmpty) {
+              if (_gateways[prov]!['number'] != phone) {
+                _gateways[prov]!['number'] = phone;
+                changed = true;
+              }
             }
           }
         });
+      }
+
+      if (changed && mounted) {
+        setState(() {});
       }
     } catch (e) {
       debugPrint('Error loading dynamic payment gateways: $e');
     }
 
-    if (mounted) {
+    if (mounted && _isLoadingGateways) {
       setState(() => _isLoadingGateways = false);
     }
   }
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     _amountController.dispose();
     _trxIdController.dispose();
     super.dispose();
@@ -268,6 +294,21 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'রিফ্রেশ',
+            onPressed: () {
+              SoundService.playTap();
+              _loadDynamicPaymentGateways();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('পেমেন্ট নম্বর আপডেট চেক করা হচ্ছে...'),
+                  duration: Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'লেনদেন বিবরণ',
             onPressed: () {
@@ -279,9 +320,12 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
+      body: RefreshIndicator(
+        onRefresh: () => _loadDynamicPaymentGateways(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -580,6 +624,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

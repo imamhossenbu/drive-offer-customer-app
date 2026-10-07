@@ -1,7 +1,7 @@
 name: drive_offer_customer_app
 description: "Alokito Telecom - Customer Mobile App (Drive Offers, Instant Recharge & Wallet)"
 publish_to: 'none'
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: ^3.11.4
