@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
 import '../../core/app_state.dart';
@@ -64,6 +65,11 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppState>().fetchTopUps();
+      }
+    });
     _loadDynamicPaymentGateways();
     // Real-time polling: auto-check every 3 seconds so changes from listener app reflect immediately
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
@@ -198,23 +204,28 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       final topUpId = data['id']?.toString() ?? data['topUpId']?.toString() ?? '';
 
       // 2. Submit Transaction ID for verification
+      final app = context.read<AppState>();
+      bool isImmediatelyVerified = false;
       if (topUpId.isNotEmpty) {
-        await CustomerApiService.instance.verifyTopUp(
+        final verifyRes = await CustomerApiService.instance.verifyTopUp(
           topUpId: topUpId,
           transactionId: _trxIdController.text.trim(),
         );
+        final status = (verifyRes['status'] ?? verifyRes['data']?['status'] ?? '').toString().toUpperCase();
+        isImmediatelyVerified = status == 'VERIFIED';
       }
 
-      if (!mounted) return;
-      await context.read<AppState>().fetchMe();
-      await context.read<AppState>().fetchTransactions();
+      await app.fetchMe();
+      await app.fetchTransactions();
+      await app.fetchTopUps();
       SoundService.playSuccess();
 
+      if (!mounted) return;
       _amountController.clear();
       _trxIdController.clear();
       setState(() => _isLoading = false);
 
-      _showTopUpSuccessDialog(amount);
+      _showTopUpSuccessDialog(amount, isImmediatelyVerified: isImmediatelyVerified);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -229,7 +240,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     }
   }
 
-  void _showTopUpSuccessDialog(double amount) {
+  void _showTopUpSuccessDialog(double amount, {bool isImmediatelyVerified = false}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -239,20 +250,27 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCFCE7),
+              decoration: BoxDecoration(
+                color: isImmediatelyVerified ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle, size: 54, color: AppColors.success),
+              child: Icon(
+                isImmediatelyVerified ? Icons.check_circle : Icons.hourglass_top_rounded,
+                size: 54,
+                color: isImmediatelyVerified ? AppColors.success : const Color(0xFFD97706),
+              ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'টপ-আপ রিকোয়েস্ট গৃহীত হয়েছে!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            Text(
+              isImmediatelyVerified ? 'ব্যালেন্স সফলভাবে যোগ হয়েছে!' : 'টপ-আপ রিকোয়েস্ট জমা হয়েছে!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
-              '৳${amount.toStringAsFixed(0)} টাকার রিকোয়েস্টটি দ্রুত যাচাই করে ব্যালেন্সে যোগ হবে।',
+              isImmediatelyVerified
+                  ? '৳${amount.toStringAsFixed(0)} আপনার মূল ওয়ালেটে সফলভাবে যোগ করা হয়েছে।'
+                  : '৳${amount.toStringAsFixed(0)} টাকার রিকোয়েস্টটি দ্রুত ভেরিফাই হচ্ছে। এসএমএস পাওয়া মাত্র স্বয়ংক্রিয়ভাবে ব্যালেন্স যোগ হবে।',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
             ),
@@ -619,6 +637,214 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                         ),
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // Recent Add Balance History Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        app.isBn ? 'সাম্প্রতিক রিচার্জ হিস্ট্রি' : 'Recent Add Money History',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                  if (app.topUps.isNotEmpty)
+                    TextButton(
+                      onPressed: () {
+                        SoundService.playTap();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TransactionHistoryScreen(initialTabIndex: 1),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        app.isBn ? 'সবগুলো দেখুন' : 'View All',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              if (app.topUps.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.history_outlined, size: 36, color: Colors.grey.shade400),
+                      const SizedBox(height: 8),
+                      Text(
+                        app.isBn ? 'এখনও কোনো রিচার্জ রিকোয়েস্ট নেই' : 'No top-up requests yet',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...app.topUps.take(5).map((topUp) {
+                  Color provColor = AppColors.primary;
+                  String provAsset = 'assets/payments/bkash.png';
+                  if (topUp.provider == 'BKASH') {
+                    provColor = const Color(0xFFE2136E);
+                    provAsset = 'assets/payments/bkash.png';
+                  } else if (topUp.provider == 'NAGAD') {
+                    provColor = const Color(0xFFF7941D);
+                    provAsset = 'assets/payments/nagad.png';
+                  } else if (topUp.provider == 'ROCKET') {
+                    provColor = const Color(0xFF8C3494);
+                    provAsset = 'assets/payments/rocket.png';
+                  } else if (topUp.provider == 'UPAY') {
+                    provColor = const Color(0xFF0047BA);
+                    provAsset = 'assets/payments/upay.png';
+                  }
+
+                  final isVerified = topUp.status == 'VERIFIED';
+                  final isVerifying = topUp.status == 'VERIFYING';
+                  final isPending = topUp.status == 'PENDING';
+
+                  final statusColor = isVerified
+                      ? AppColors.success
+                      : (isVerifying
+                          ? const Color(0xFFD97706)
+                          : (isPending ? const Color(0xFF2563EB) : AppColors.error));
+
+                  final statusBg = isVerified
+                      ? const Color(0xFFDCFCE7)
+                      : (isVerifying
+                          ? const Color(0xFFFEF3C7)
+                          : (isPending ? const Color(0xFFDBEAFE) : const Color(0xFFFEE2E2)));
+
+                  final statusLabel = isVerified
+                      ? (app.isBn ? 'সফল (যোগ হয়েছে)' : 'Verified')
+                      : (isVerifying
+                          ? (app.isBn ? 'যাচাই চলছে...' : 'Verifying')
+                          : (isPending
+                              ? (app.isBn ? 'অপেক্ষমাণ' : 'Pending')
+                              : (app.isBn ? 'বাতিল' : 'Failed')));
+
+                  final dateStr = topUp.createdAt.isNotEmpty
+                      ? DateFormat('dd MMM, hh:mm a').format(DateTime.tryParse(topUp.createdAt) ?? DateTime.now())
+                      : '';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: provColor.withOpacity(0.3), width: 1.5),
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              provAsset,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(Icons.payment, color: provColor, size: 20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    topUp.provider,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: provColor),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  if (topUp.transactionId.isNotEmpty)
+                                    Expanded(
+                                      child: Text(
+                                        'Trx: ${topUp.transactionId}',
+                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontFamily: 'monospace'),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                dateStr,
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '+৳${topUp.amount.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.success,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusBg,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               const SizedBox(height: 20),
             ],
           ),

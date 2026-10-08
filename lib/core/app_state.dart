@@ -109,6 +109,7 @@ class TransactionModel {
   final String status;
   final String description;
   final String createdAt;
+  final String? recipientPhone;
 
   TransactionModel({
     required this.id,
@@ -118,6 +119,7 @@ class TransactionModel {
     required this.status,
     required this.description,
     required this.createdAt,
+    this.recipientPhone,
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
@@ -127,14 +129,68 @@ class TransactionModel {
     final balNum = (json['balanceAfter'] ?? 0) as num;
     final bal = balNum > 1000 ? balNum / 100 : balNum.toDouble();
 
+    final desc = json['description']?.toString() ?? json['note']?.toString() ?? '';
+    String? phone = json['recipientPhone']?.toString();
+    if ((phone == null || phone.isEmpty) && json['metadata'] is Map) {
+      phone = json['metadata']['recipientPhone']?.toString();
+    }
+    if (phone == null || phone.isEmpty) {
+      final match = RegExp(r'(01[3-9]\d{8})').firstMatch(desc);
+      if (match != null) {
+        phone = match.group(1);
+      }
+    }
+
     return TransactionModel(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
       type: json['type']?.toString().toUpperCase() ?? 'TOPUP',
       amount: amt,
       balanceAfter: bal,
       status: json['status']?.toString().toUpperCase() ?? 'COMPLETED',
-      description: json['description']?.toString() ?? json['note']?.toString() ?? '',
+      description: desc,
       createdAt: json['createdAt']?.toString() ?? '',
+      recipientPhone: phone,
+    );
+  }
+}
+
+class TopUpItem {
+  final String id;
+  final String provider;
+  final double amount;
+  final String status;
+  final String transactionId;
+  final String createdAt;
+  final String? adminNote;
+
+  TopUpItem({
+    required this.id,
+    required this.provider,
+    required this.amount,
+    required this.status,
+    required this.transactionId,
+    required this.createdAt,
+    this.adminNote,
+  });
+
+  factory TopUpItem.fromJson(Map<String, dynamic> json) {
+    final amtBdt = json['amountBdt'];
+    final amtNum = (json['amount'] ?? 0) as num;
+    final double amt = amtBdt != null
+        ? (amtBdt as num).toDouble()
+        : (amtNum > 1000 ? amtNum / 100.0 : amtNum.toDouble());
+
+    final prov = (json['paymentProvider'] ?? json['provider'] ?? 'BKASH').toString().toUpperCase();
+    final txId = (json['customerTransactionId'] ?? json['transactionId'] ?? json['senderPhone'] ?? '').toString();
+
+    return TopUpItem(
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      provider: prov,
+      amount: amt,
+      status: json['status']?.toString().toUpperCase() ?? 'PENDING',
+      transactionId: txId,
+      createdAt: json['createdAt']?.toString() ?? '',
+      adminNote: json['adminNote']?.toString() ?? json['failureReason']?.toString(),
     );
   }
 }
@@ -192,12 +248,15 @@ class AppState extends ChangeNotifier {
   List<DriveOffer> _regularOffers = [];
   List<OrderModel> _orders = [];
   List<TransactionModel> _transactions = [];
+  List<TopUpItem> _topUps = [];
   List<NotificationItem> _notifications = [];
   List<Map<String, dynamic>> _rawOperators = [];
+  Map<String, dynamic> _serviceStatus = {};
 
   bool _isLoadingOffers = false;
   bool _isLoadingOrders = false;
   bool _isLoadingTransactions = false;
+  bool _isLoadingTopUps = false;
 
   // ── Getters ──────────────────────────────────────────────────────────────
   bool get isLoggedIn => _isLoggedIn;
@@ -225,12 +284,15 @@ class AppState extends ChangeNotifier {
   List<DriveOffer> get regularOffers => _regularOffers;
   List<OrderModel> get orders => _orders;
   List<TransactionModel> get transactions => _transactions;
+  List<TopUpItem> get topUps => _topUps;
   List<NotificationItem> get notifications => _notifications;
   List<Map<String, dynamic>> get operators => _rawOperators;
+  Map<String, dynamic> get serviceStatus => _serviceStatus;
 
   bool get isLoadingOffers => _isLoadingOffers;
   bool get isLoadingOrders => _isLoadingOrders;
   bool get isLoadingTransactions => _isLoadingTransactions;
+  bool get isLoadingTopUps => _isLoadingTopUps;
 
   int get unreadNotificationsCount => _notifications.where((n) => !n.isRead).length;
   int get pendingOrdersCount => _orders.where((o) => o.status == 'PENDING' || o.status == 'PROCESSING').length;
@@ -339,7 +401,9 @@ class AppState extends ChangeNotifier {
       fetchOffers(),
       fetchOrders(),
       fetchTransactions(),
+      fetchTopUps(),
       fetchNotifications(),
+      fetchServiceStatus(),
     ]);
   }
 
@@ -351,8 +415,12 @@ class AppState extends ChangeNotifier {
         _user = (d['user'] is Map) ? Map<String, dynamic>.from(d['user']) : (d is Map ? Map<String, dynamic>.from(d) : {});
         final w = d['wallet'] as Map<String, dynamic>?;
         if (w != null) {
-          final balPoisha = (w['balance'] as num?)?.toDouble() ?? 0.0;
-          _balance = balPoisha > 1000 ? balPoisha / 100 : balPoisha;
+          if (w['balanceBdt'] != null) {
+            _balance = (w['balanceBdt'] as num).toDouble();
+          } else {
+            final balPoisha = (w['balance'] as num?)?.toDouble() ?? 0.0;
+            _balance = balPoisha / 100.0;
+          }
           _totalAdded = ((w['totalAdded'] as num?)?.toDouble() ?? 0.0) / 100;
           _totalSpent = ((w['totalSpent'] as num?)?.toDouble() ?? 0.0) / 100;
         }
@@ -418,28 +486,60 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchOrders() async {
-    _isLoadingOrders = true;
+  Future<void> fetchOrders({bool isSilent = false}) async {
+    if (!isSilent) {
+      _isLoadingOrders = true;
+      notifyListeners();
+    }
     try {
       final res = await CustomerApiService.instance.getOrders();
       final data = res['data'];
       final List list = (data is List ? data : (data?['orders'] is List ? data['orders'] : (data?['docs'] is List ? data['docs'] : [])));
       _orders = list.map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
     } catch (_) {}
-    _isLoadingOrders = false;
+    if (!isSilent) _isLoadingOrders = false;
     notifyListeners();
   }
 
-  Future<void> fetchTransactions() async {
-    _isLoadingTransactions = true;
+  Future<void> fetchTransactions({bool isSilent = false}) async {
+    if (!isSilent) {
+      _isLoadingTransactions = true;
+      notifyListeners();
+    }
     try {
       final res = await CustomerApiService.instance.getWalletTransactions();
       final data = res['data'];
       final List list = (data is List ? data : (data?['transactions'] is List ? data['transactions'] : (data?['docs'] is List ? data['docs'] : [])));
       _transactions = list.map((e) => TransactionModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
     } catch (_) {}
-    _isLoadingTransactions = false;
+    if (!isSilent) _isLoadingTransactions = false;
     notifyListeners();
+  }
+
+  Future<void> fetchTopUps({bool isSilent = false}) async {
+    if (!isSilent) {
+      _isLoadingTopUps = true;
+      notifyListeners();
+    }
+    try {
+      final res = await CustomerApiService.instance.getTopUps();
+      final data = res['data'];
+      final List list = (data is List ? data : (data?['topUps'] is List ? data['topUps'] : (data?['docs'] is List ? data['docs'] : [])));
+      _topUps = list.map((e) => TopUpItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    } catch (_) {}
+    if (!isSilent) _isLoadingTopUps = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchServiceStatus() async {
+    try {
+      final res = await CustomerApiService.instance.getSettings();
+      final data = res['data'] ?? res;
+      if (data is Map && data['serviceStatus'] is Map) {
+        _serviceStatus = Map<String, dynamic>.from(data['serviceStatus'] as Map);
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   Future<void> fetchNotifications() async {

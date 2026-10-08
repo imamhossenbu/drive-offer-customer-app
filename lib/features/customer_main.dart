@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_state.dart';
 import '../core/constants.dart';
 import '../core/sound_service.dart';
+import '../core/app_update_service.dart';
 import 'home/home_screen.dart';
 import 'offers/offers_screen.dart';
 import 'wallet/add_money_screen.dart';
@@ -20,6 +22,7 @@ class CustomerMain extends StatefulWidget {
 
 class _CustomerMainState extends State<CustomerMain> {
   late int _currentIndex;
+  Timer? _statusTimer;
 
   @override
   void initState() {
@@ -29,14 +32,39 @@ class _CustomerMainState extends State<CustomerMain> {
       if (context.read<AppState>().isLoggedIn) {
         context.read<AppState>().syncFromStorage();
         context.read<AppState>().refreshAll();
+        AppUpdateService.instance.checkForUpdate(context);
       }
     });
+    // Real-time live synchronization: polls live balance, orders, top-ups, notices, and notifications every 4 seconds
+    _statusTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted && context.read<AppState>().isLoggedIn) {
+        final app = context.read<AppState>();
+        app.fetchMe();
+        app.fetchOrders(isSilent: true);
+        app.fetchTopUps(isSilent: true);
+        app.fetchServiceStatus();
+        app.fetchNotifications();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
   }
 
   void _onTabSelected(int index) {
     if (_currentIndex != index) {
       SoundService.playTap();
       setState(() => _currentIndex = index);
+      final app = context.read<AppState>();
+      if (index == 2) {
+        app.fetchMe();
+        app.fetchTopUps();
+      } else if (index == 3) {
+        app.fetchOrders();
+      }
     }
   }
 

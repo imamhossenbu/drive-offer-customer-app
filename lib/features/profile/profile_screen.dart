@@ -11,6 +11,7 @@ import '../../core/constants.dart';
 import '../../core/sound_service.dart';
 import '../auth/login_screen.dart';
 import '../wallet/transaction_history_screen.dart';
+import '../../core/app_update_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -613,7 +614,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const TransactionHistoryScreen()),
+                        MaterialPageRoute(builder: (_) => const TransactionHistoryScreen(initialTabIndex: 0)),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+
+                  // Top-Up History (রিচার্জ হিস্ট্রি)
+                  ListTile(
+                    leading: const Icon(Icons.payments_outlined, color: Color(0xFF10B981)),
+                    title: Text(app.isBn ? 'রিচার্জ হিস্ট্রি (Top-Up Records)' : 'Top-Up History'),
+                    trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const TransactionHistoryScreen(initialTabIndex: 1)),
                       );
                     },
                   ),
@@ -648,6 +663,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Helpline WhatsApp: +8801890000000')),
                       );
+                    },
+                  ),
+                  const Divider(height: 1),
+
+                  // Check for App Updates (১-ক্লিক আপডেট)
+                  ListTile(
+                    leading: const Icon(Icons.system_update_rounded, color: AppColors.primary),
+                    title: Text(app.isBn ? 'অ্যাপ আপডেট চেক করুন' : 'Check for Updates'),
+                    subtitle: Text(app.isBn ? 'নতুন ভার্সন ও ফিচার ইনস্টল করুন' : 'Check & install latest APK version'),
+                    trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                    onTap: () {
+                      SoundService.playTap();
+                      AppUpdateService.instance.checkForUpdate(context, isManualCheck: true);
                     },
                   ),
                   const Divider(height: 1),

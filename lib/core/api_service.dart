@@ -445,6 +445,14 @@ class CustomerApiService {
     return _parse(res);
   }
 
+  Future<Map<String, dynamic>> getTopUps({int page = 1, int limit = 50}) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/wallet/topups?page=$page&limit=$limit'),
+      headers: _headers(),
+    );
+    return _parse(res);
+  }
+
   Future<Map<String, dynamic>> getWalletTransactions({int page = 1, int limit = 20}) async {
     final res = await http.get(
       Uri.parse('$_baseUrl/wallet/transactions?page=$page&limit=$limit'),

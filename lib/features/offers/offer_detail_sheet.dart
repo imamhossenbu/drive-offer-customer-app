@@ -68,6 +68,20 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     final app = context.read<AppState>();
+    final serviceStatus = app.serviceStatus;
+    if (serviceStatus['offersClosed'] == true) {
+      SoundService.playError();
+      final note = (serviceStatus['offersClosedNote'] ?? 'আজকের মতো সকল ড্রাইভ অফার বন্ধ রয়েছে।').toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(note),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final offerPrice = widget.offer.discountPrice > 0 ? widget.offer.discountPrice : widget.offer.price;
 
     if (app.walletBalance < offerPrice) {
