@@ -20,6 +20,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   String _selectedProvider = 'BKASH';
   final _amountController = TextEditingController();
   final _trxIdController = TextEditingController();
+  final _senderPhoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _isLoading = false;
@@ -155,6 +156,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     _autoRefreshTimer?.cancel();
     _amountController.dispose();
     _trxIdController.dispose();
+    _senderPhoneController.dispose();
     super.dispose();
   }
 
@@ -171,10 +173,11 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     Clipboard.setData(ClipboardData(text: text));
     SoundService.playTap();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('নম্বর কপি করা হয়েছে! (Copied to clipboard)'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text('নম্বর কপি করা হয়েছে: $text'),
+        duration: const Duration(seconds: 2),
         backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -185,7 +188,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
     if (amount < 20) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Minimum add money amount is ৳20'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('সর্বনিম্ন ব্যালেন্স যোগ ২০ টাকা'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -194,26 +197,22 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     SoundService.playTap();
 
     try {
-      // 1. Create TopUp record
+      final app = context.read<AppState>();
+      final senderPhone = _senderPhoneController.text.trim().isNotEmpty
+          ? _senderPhoneController.text.trim()
+          : app.userPhone;
+
+      // 1-step atomic TopUp submission: sends provider, amount, trxId, senderPhone together
       final topUpRes = await CustomerApiService.instance.createTopUp(
         provider: _selectedProvider,
         amount: amount,
+        transactionId: _trxIdController.text.trim(),
+        senderPhone: senderPhone,
       );
 
       final data = topUpRes['data'] ?? topUpRes;
-      final topUpId = data['id']?.toString() ?? data['topUpId']?.toString() ?? '';
-
-      // 2. Submit Transaction ID for verification
-      final app = context.read<AppState>();
-      bool isImmediatelyVerified = false;
-      if (topUpId.isNotEmpty) {
-        final verifyRes = await CustomerApiService.instance.verifyTopUp(
-          topUpId: topUpId,
-          transactionId: _trxIdController.text.trim(),
-        );
-        final status = (verifyRes['status'] ?? verifyRes['data']?['status'] ?? '').toString().toUpperCase();
-        isImmediatelyVerified = status == 'VERIFIED';
-      }
+      final status = (data['status'] ?? '').toString().toUpperCase();
+      final bool isImmediatelyVerified = data['isImmediatelyVerified'] == true || status == 'VERIFIED';
 
       await app.fetchMe();
       await app.fetchTransactions();
@@ -223,6 +222,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       if (!mounted) return;
       _amountController.clear();
       _trxIdController.clear();
+      _senderPhoneController.clear();
       setState(() => _isLoading = false);
 
       _showTopUpSuccessDialog(amount, isImmediatelyVerified: isImmediatelyVerified);
@@ -304,7 +304,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: Text(
-          app.isBn ? 'এড মানি (রিচার্জ)' : 'Add Money / Top-Up',
+          app.isBn ? 'ব্যালেন্স অ্যাড (টপ-আপ)' : 'Add Balance / Top-Up',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -317,9 +317,10 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
             onPressed: () {
               SoundService.playTap();
               _loadDynamicPaymentGateways();
+              context.read<AppState>().fetchTopUps();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('পেমেন্ট নম্বর আপডেট চেক করা হচ্ছে...'),
+                  content: Text('তথ্য রিফ্রেশ করা হচ্ছে...'),
                   duration: Duration(seconds: 1),
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -328,11 +329,11 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.history),
-            tooltip: 'লেনদেন বিবরণ',
+            tooltip: 'টপ-আপ হিস্ট্রি',
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const TransactionHistoryScreen()),
+                MaterialPageRoute(builder: (_) => const TransactionHistoryScreen(initialTabIndex: 1)),
               );
             },
           ),
@@ -551,7 +552,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Step 3: Enter Amount & TrxID
+              // Step 3: Enter Amount, TrxID & Sender Number
               Text(
                 app.isBn ? '২. টাকার পরিমাণ ও TrxID দিন' : '2. Enter Amount & TrxID',
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
@@ -571,7 +572,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'টাকার পরিমাণ লিখুন';
                   final val = double.tryParse(v) ?? 0;
-                  if (val < 20) return 'সর্বনিম্ন রিচার্জ ২০ টাকা';
+                  if (val < 20) return app.isBn ? 'সর্বনিম্ন ব্যালেন্স যোগ ২০ টাকা' : 'Minimum amount is ৳20';
                   return null;
                 },
               ),
@@ -613,6 +614,19 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+
+              // Sender Phone Number Field (Optional)
+              TextFormField(
+                controller: _senderPhoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: app.isBn ? 'যে নম্বর থেকে টাকা পাঠিয়েছেন (ঐচ্ছিক)' : 'Sender Phone Number (Optional)',
+                  prefixIcon: const Icon(Icons.phone_android_outlined, color: AppColors.primary),
+                  hintText: app.userPhone.isNotEmpty ? app.userPhone : 'e.g. 017xxxxxxxx',
+                  helperText: app.isBn ? 'ফাঁকা রাখলে আপনার প্রোফাইল নম্বর ব্যবহার হবে' : 'Defaults to your registered phone number',
+                ),
+              ),
               const SizedBox(height: 28),
 
               // Submit Button
@@ -639,7 +653,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Recent Add Balance History Header
+              // Recent Top-Up History Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -647,7 +661,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                     children: [
                       Container(
                         width: 4,
-                        height: 16,
+                        height: 18,
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(2),
@@ -655,13 +669,13 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        app.isBn ? 'সাম্প্রতিক রিচার্জ হিস্ট্রি' : 'Recent Add Money History',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        app.isBn ? 'সাম্প্রতিক টপ-আপ হিস্ট্রি' : 'Recent Top-Up History',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                     ],
                   ),
                   if (app.topUps.isNotEmpty)
-                    TextButton(
+                    TextButton.icon(
                       onPressed: () {
                         SoundService.playTap();
                         Navigator.push(
@@ -671,31 +685,44 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                           ),
                         );
                       },
-                      child: Text(
+                      icon: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                      label: Text(
                         app.isBn ? 'সবগুলো দেখুন' : 'View All',
                         style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               if (app.topUps.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.history_outlined, size: 36, color: Colors.grey.shade400),
-                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.history_rounded, size: 36, color: Colors.grey.shade400),
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        app.isBn ? 'এখনও কোনো রিচার্জ রিকোয়েস্ট নেই' : 'No top-up requests yet',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                        app.isBn ? 'এখনও কোনো টপ-আপ রিকোয়েস্ট নেই' : 'No top-up requests yet',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        app.isBn ? 'টাকা পাঠিয়ে ব্যালেন্স রিকোয়েস্ট সাবমিট করুন' : 'Submit a request to add balance',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                       ),
                     ],
                   ),
@@ -735,113 +762,273 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                           : (isPending ? const Color(0xFFDBEAFE) : const Color(0xFFFEE2E2)));
 
                   final statusLabel = isVerified
-                      ? (app.isBn ? 'সফল (যোগ হয়েছে)' : 'Verified')
+                      ? (app.isBn ? 'সফল (যুক্ত হয়েছে)' : 'Verified')
                       : (isVerifying
                           ? (app.isBn ? 'যাচাই চলছে...' : 'Verifying')
                           : (isPending
                               ? (app.isBn ? 'অপেক্ষমাণ' : 'Pending')
                               : (app.isBn ? 'বাতিল' : 'Failed')));
 
+                  final IconData statusIcon = isVerified
+                      ? Icons.check_circle_rounded
+                      : (isVerifying
+                          ? Icons.hourglass_top_rounded
+                          : (isPending ? Icons.schedule_rounded : Icons.cancel_rounded));
+
                   final dateStr = topUp.createdAt.isNotEmpty
-                      ? DateFormat('dd MMM, hh:mm a').format(DateTime.tryParse(topUp.createdAt) ?? DateTime.now())
-                      : '';
+                      ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.tryParse(topUp.createdAt) ?? DateTime.now())
+                      : 'Just now';
+
+                  final displayTxId = topUp.transactionId.isNotEmpty
+                      ? topUp.transactionId
+                      : (topUp.topUpNumber.isNotEmpty ? topUp.topUpNumber : 'N/A');
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.grey.shade200),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: provColor.withOpacity(0.3), width: 1.5),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              provAsset,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => Icon(Icons.payment, color: provColor, size: 20),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top Row: Logo, Provider, Status Badge, Amount
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    topUp.provider,
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: provColor),
+                              Container(
+                                width: 44,
+                                height: 44,
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: provColor.withOpacity(0.08),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: provColor.withOpacity(0.25), width: 1.5),
+                                ),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    provAsset,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => Icon(Icons.payment, color: provColor, size: 22),
                                   ),
-                                  const SizedBox(width: 6),
-                                  if (topUp.transactionId.isNotEmpty)
-                                    Expanded(
-                                      child: Text(
-                                        'Trx: ${topUp.transactionId}',
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontFamily: 'monospace'),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                ],
+                                ),
                               ),
-                              const SizedBox(height: 3),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          topUp.provider,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            color: provColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: statusBg,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: statusColor.withOpacity(0.3), width: 0.8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(statusIcon, size: 10, color: statusColor),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                statusLabel,
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: statusColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade500),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          dateStr,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                               Text(
-                                dateStr,
-                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                '+৳${topUp.amount.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.success,
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '+৳${topUp.amount.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.success,
-                              ),
+
+                          const SizedBox(height: 12),
+                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const SizedBox(height: 10),
+
+                          // Bottom Box: TrxID & Number Details
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade200),
                             ),
-                            const SizedBox(height: 3),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: statusBg,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                statusLabel,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusColor,
+                            child: Column(
+                              children: [
+                                // TrxID Row with Copy Action
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.tag_rounded, size: 14, color: AppColors.textSecondary),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          'TrxID: ',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                        Text(
+                                          displayTxId,
+                                          style: TextStyle(
+                                            fontFamily: 'monospace',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: displayTxId != 'N/A' ? AppColors.textPrimary : Colors.grey.shade400,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (displayTxId != 'N/A')
+                                      InkWell(
+                                        onTap: () => _copyToClipboard(displayTxId),
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.copy_rounded, size: 12, color: AppColors.primary),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                app.isBn ? 'কপি' : 'Copy',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
+                                // Number Row (Payment / Receiver & Sender)
+                                if (topUp.paymentNumber.isNotEmpty || (topUp.senderPhone != null && topUp.senderPhone!.isNotEmpty)) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.phone_android_rounded, size: 14, color: AppColors.textSecondary),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            app.isBn ? 'নম্বর: ' : 'Number: ',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey.shade700,
+                                            ),
+                                          ),
+                                          Text(
+                                            topUp.paymentNumber.isNotEmpty ? topUp.paymentNumber : (topUp.senderPhone ?? ''),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (topUp.senderPhone != null && topUp.senderPhone!.isNotEmpty && topUp.paymentNumber.isNotEmpty)
+                                        Text(
+                                          'প্রেরক: ${topUp.senderPhone}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                          // Admin Note / Failure Reason Banner
+                          if (topUp.adminNote != null && topUp.adminNote!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline, size: 14, color: AppColors.error),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      topUp.adminNote!,
+                                      style: const TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 }),

@@ -156,19 +156,25 @@ class TransactionModel {
 
 class TopUpItem {
   final String id;
+  final String topUpNumber;
   final String provider;
   final double amount;
   final String status;
   final String transactionId;
+  final String paymentNumber;
+  final String? senderPhone;
   final String createdAt;
   final String? adminNote;
 
   TopUpItem({
     required this.id,
+    required this.topUpNumber,
     required this.provider,
     required this.amount,
     required this.status,
     required this.transactionId,
+    required this.paymentNumber,
+    this.senderPhone,
     required this.createdAt,
     this.adminNote,
   });
@@ -181,14 +187,19 @@ class TopUpItem {
         : (amtNum > 1000 ? amtNum / 100.0 : amtNum.toDouble());
 
     final prov = (json['paymentProvider'] ?? json['provider'] ?? 'BKASH').toString().toUpperCase();
-    final txId = (json['customerTransactionId'] ?? json['transactionId'] ?? json['senderPhone'] ?? '').toString();
+    final txId = (json['customerTransactionId'] ?? json['transactionId'] ?? '').toString().trim();
+    final pNum = (json['paymentNumber'] ?? '').toString().trim();
+    final sPhone = json['senderPhone']?.toString().trim();
 
     return TopUpItem(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      topUpNumber: json['topUpNumber']?.toString() ?? '',
       provider: prov,
       amount: amt,
       status: json['status']?.toString().toUpperCase() ?? 'PENDING',
       transactionId: txId,
+      paymentNumber: pNum,
+      senderPhone: (sPhone != null && sPhone.isNotEmpty) ? sPhone : null,
       createdAt: json['createdAt']?.toString() ?? '',
       adminNote: json['adminNote']?.toString() ?? json['failureReason']?.toString(),
     );
@@ -525,7 +536,22 @@ class AppState extends ChangeNotifier {
       final res = await CustomerApiService.instance.getTopUps();
       final data = res['data'];
       final List list = (data is List ? data : (data?['topUps'] is List ? data['topUps'] : (data?['docs'] is List ? data['docs'] : [])));
-      _topUps = list.map((e) => TopUpItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      final seenIds = <String>{};
+      final seenTxKeys = <String>{};
+      _topUps = list
+          .map((e) => TopUpItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where((item) {
+            if (item.id.isEmpty) return false;
+            // Prevent duplicate MongoDB IDs
+            if (!seenIds.add(item.id)) return false;
+            // Prevent duplicate transaction IDs for same provider
+            if (item.transactionId.isNotEmpty) {
+              final key = '${item.provider}_${item.transactionId.toUpperCase()}';
+              if (!seenTxKeys.add(key)) return false;
+            }
+            return true;
+          })
+          .toList();
     } catch (_) {}
     if (!isSilent) _isLoadingTopUps = false;
     notifyListeners();

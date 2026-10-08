@@ -60,7 +60,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: Text(
-          app.isBn ? 'লেনদেন ও রিচার্জ বিবরণ' : 'History & Ledger',
+          app.isBn ? 'লেনদেন ও ব্যালেন্স বিবরণ' : 'History & Ledger',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -80,7 +80,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
             ),
             Tab(
               icon: const Icon(Icons.payments_rounded, size: 20),
-              text: app.isBn ? 'রিচার্জ হিস্ট্রি' : 'Add Balance History',
+              text: app.isBn ? 'টপ-আপ হিস্ট্রি' : 'Top-Up History',
             ),
           ],
         ),
@@ -305,7 +305,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                   ),
           ),
 
-          // TAB 2: Add Balance (Top-Up) History
+          // TAB 2: Top-Up (Add Balance) History
           RefreshIndicator(
             onRefresh: () => app.fetchTopUps(),
             color: AppColors.primary,
@@ -317,7 +317,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                         Icon(Icons.payments_outlined, size: 64, color: Colors.grey.shade400),
                         const SizedBox(height: 12),
                         Text(
-                          app.isBn ? 'কোন রিচার্জ রিকোয়েস্ট তথ্য নেই' : 'No top-up records yet',
+                          app.isBn ? 'কোন টপ-আপ রিকোয়েস্ট তথ্য নেই' : 'No top-up records yet',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -366,184 +366,276 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                               : (isPending ? const Color(0xFFDBEAFE) : const Color(0xFFFEE2E2)));
 
                       final statusLabel = isVerified
-                          ? (app.isBn ? 'সফল (যোগ হয়েছে)' : 'Verified')
+                          ? (app.isBn ? 'সফল (যুক্ত হয়েছে)' : 'Verified')
                           : (isVerifying
                               ? (app.isBn ? 'যাচাই চলছে...' : 'Verifying')
                               : (isPending
                                   ? (app.isBn ? 'অপেক্ষমাণ' : 'Pending')
                                   : (app.isBn ? 'বাতিল' : 'Failed')));
 
+                      final IconData statusIcon = isVerified
+                          ? Icons.check_circle_rounded
+                          : (isVerifying
+                              ? Icons.hourglass_top_rounded
+                              : (isPending ? Icons.schedule_rounded : Icons.cancel_rounded));
+
                       final dateStr = topUp.createdAt.isNotEmpty
                           ? DateFormat('dd MMM yyyy, hh:mm a')
                               .format(DateTime.tryParse(topUp.createdAt) ?? DateTime.now())
                           : 'Just now';
 
+                      final displayTxId = topUp.transactionId.isNotEmpty
+                          ? topUp.transactionId
+                          : (topUp.topUpNumber.isNotEmpty ? topUp.topUpNumber : 'N/A');
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey.shade200),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 6,
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: provColor.withOpacity(0.3), width: 1.5),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      provAsset,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) =>
-                                          Icon(Icons.payment, color: provColor, size: 22),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Top Row
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: provColor.withOpacity(0.08),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: provColor.withOpacity(0.25), width: 1.5),
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        provAsset,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) =>
+                                            Icon(Icons.payment, color: provColor, size: 22),
+                                      ),
                                     ),
                                   ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              '${topUp.provider} টপ-আপ',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                color: provColor,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: statusBg,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: statusColor.withOpacity(0.3), width: 0.8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(statusIcon, size: 10, color: statusColor),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    statusLabel,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: statusColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade500),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              dateStr,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey.shade600,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '+৳${topUp.amount.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+                              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                              const SizedBox(height: 10),
+
+                              // Bottom Details Box
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.grey.shade200),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
+                                child: Column(
+                                  children: [
+                                    // TrxID Row
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.tag_rounded, size: 14, color: AppColors.textSecondary),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              'TrxID: ',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey.shade700,
+                                              ),
+                                            ),
+                                            Text(
+                                              displayTxId,
+                                              style: TextStyle(
+                                                fontFamily: 'monospace',
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: displayTxId != 'N/A' ? AppColors.textPrimary : Colors.grey.shade400,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (displayTxId != 'N/A')
+                                          InkWell(
+                                            onTap: () => _copyText(displayTxId, 'TrxID'),
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.copy_rounded, size: 12, color: AppColors.primary),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    app.isBn ? 'কপি' : 'Copy',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    // Number Row (Payment Number & Sender Phone)
+                                    if (topUp.paymentNumber.isNotEmpty || (topUp.senderPhone != null && topUp.senderPhone!.isNotEmpty)) ...[
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.phone_android_rounded, size: 14, color: AppColors.textSecondary),
+                                              const SizedBox(width: 5),
+                                              Text(
+                                                app.isBn ? 'নম্বর: ' : 'Number: ',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                              ),
+                                              Text(
+                                                topUp.paymentNumber.isNotEmpty ? topUp.paymentNumber : (topUp.senderPhone ?? ''),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (topUp.senderPhone != null && topUp.senderPhone!.isNotEmpty && topUp.paymentNumber.isNotEmpty)
+                                            Text(
+                                              'প্রেরক: ${topUp.senderPhone}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey.shade600,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+
+                              // Admin Note / Failure Reason Banner
+                              if (topUp.adminNote != null && topUp.adminNote!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFFECACA)),
+                                  ),
+                                  child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        '${topUp.provider} রিচার্জ',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: provColor,
+                                      const Icon(Icons.info_outline, size: 14, color: AppColors.error),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'মন্তব্য: ${topUp.adminNote}',
+                                          style: const TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.w500),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        dateStr,
-                                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '+৳${topUp.amount.toStringAsFixed(0)}',
-                                      style: const TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.success,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: statusBg,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        statusLabel,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: statusColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ],
-                            ),
-
-                            // TrxID section
-                            if (topUp.transactionId.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade200),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.tag, size: 14, color: AppColors.textSecondary),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'TrxID: ${topUp.transactionId}',
-                                          style: const TextStyle(
-                                            fontFamily: 'monospace',
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 12,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    InkWell(
-                                      onTap: () => _copyText(topUp.transactionId, 'TrxID'),
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                        child: Text(
-                                          'কপি',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ],
-
-                            // Admin Note or Failure Reason
-                            if (topUp.adminNote != null && topUp.adminNote!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFFECACA)),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.info_outline, size: 14, color: AppColors.error),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'মন্তব্য: ${topUp.adminNote}',
-                                        style: const TextStyle(fontSize: 11, color: AppColors.error),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
                       );
                     },

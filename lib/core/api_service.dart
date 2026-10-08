@@ -421,14 +421,23 @@ class CustomerApiService {
   Future<Map<String, dynamic>> createTopUp({
     required String provider, // "BKASH", "NAGAD", "ROCKET", "UPAY"
     required double amount,
+    String? transactionId,
+    String? senderPhone,
   }) async {
+    final payload = <String, dynamic>{
+      'provider': provider.toUpperCase(),
+      'amount': amount,
+    };
+    if (transactionId != null && transactionId.trim().isNotEmpty) {
+      payload['transactionId'] = transactionId.trim().toUpperCase();
+    }
+    if (senderPhone != null && senderPhone.trim().isNotEmpty) {
+      payload['senderPhone'] = senderPhone.trim();
+    }
     final res = await http.post(
       Uri.parse('$_baseUrl/wallet/topups'),
       headers: _headers(),
-      body: jsonEncode({
-        'provider': provider.toUpperCase(),
-        'amount': amount,
-      }),
+      body: jsonEncode(payload),
     );
     return _parse(res);
   }

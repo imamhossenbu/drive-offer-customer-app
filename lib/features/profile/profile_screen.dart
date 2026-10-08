@@ -620,10 +620,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1),
 
-                  // Top-Up History (রিচার্জ হিস্ট্রি)
+                  // Top-Up History (টপ-আপ হিস্ট্রি)
                   ListTile(
                     leading: const Icon(Icons.payments_outlined, color: Color(0xFF10B981)),
-                    title: Text(app.isBn ? 'রিচার্জ হিস্ট্রি (Top-Up Records)' : 'Top-Up History'),
+                    title: Text(app.isBn ? 'টপ-আপ হিস্ট্রি (Add Balance Records)' : 'Top-Up History'),
                     trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
                     onTap: () {
                       Navigator.push(
