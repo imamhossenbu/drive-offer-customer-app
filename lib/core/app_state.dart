@@ -552,20 +552,9 @@ class AppState extends ChangeNotifier {
       final data = res['data'];
       final List list = (data is List ? data : (data?['topUps'] is List ? data['topUps'] : (data?['docs'] is List ? data['docs'] : [])));
       final seenIds = <String>{};
-      final seenTxKeys = <String>{};
       _topUps = list
           .map((e) => TopUpItem.fromJson(Map<String, dynamic>.from(e as Map)))
-          .where((item) {
-            if (item.id.isEmpty) return false;
-            // Prevent duplicate MongoDB IDs
-            if (!seenIds.add(item.id)) return false;
-            // Prevent duplicate transaction IDs for same provider
-            if (item.transactionId.isNotEmpty) {
-              final key = '${item.provider}_${item.transactionId.toUpperCase()}';
-              if (!seenTxKeys.add(key)) return false;
-            }
-            return true;
-          })
+          .where((item) => item.id.isNotEmpty && seenIds.add(item.id))
           .toList();
     } catch (_) {}
     if (!isSilent) _isLoadingTopUps = false;
