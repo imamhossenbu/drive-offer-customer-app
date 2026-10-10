@@ -245,22 +245,77 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  bool _isServiceItemActive(dynamic val) {
+    if (val == null) return false;
+    if (val is bool) return val;
+    if (val is Map) return val['active'] == true || val['status'] == true;
+    if (val is String) {
+      final s = val.trim().toLowerCase();
+      if (s.isEmpty || s == 'false' || s == 'null' || s == '0' || s.contains('false')) return false;
+      return s == 'true';
+    }
+    return false;
+  }
+
+  String _getServiceItemNote(dynamic val, String noteField, String fallback) {
+    if (noteField.isNotEmpty && noteField != 'null' && noteField != 'false' && !noteField.startsWith('{')) {
+      return noteField;
+    }
+    if (val is Map) {
+      final msg = val['message'] ?? val['note'] ?? '';
+      if (msg is String && msg.trim().isNotEmpty) return msg.trim();
+    }
+    if (val is String && val.trim().isNotEmpty && !val.contains('{') && val.trim() != 'true' && val.trim() != 'false') {
+      return val.trim();
+    }
+    return fallback;
+  }
+
   Widget _buildServiceStatusNotices(BuildContext context, AppState app) {
     final status = app.serviceStatus;
     if (status.isEmpty) return const SizedBox.shrink();
 
-    final isPrayerBreak = status['prayerBreak'] == true;
-    final isNightBreak = status['nightBreak'] == true;
-    final isOffersClosed = status['offersClosed'] == true;
-    final noticeBanner = (status['noticeBanner'] ?? '').toString().trim();
+    final isPrayerBreak = _isServiceItemActive(status['prayerBreak']);
+    final isNightBreak = _isServiceItemActive(status['nightBreak']);
+    final isOffersClosed = _isServiceItemActive(status['offersClosed']);
 
-    if (!isPrayerBreak && !isNightBreak && !isOffersClosed && noticeBanner.isEmpty) {
+    String noticeBannerText = '';
+    final rawNotice = status['noticeBanner'];
+    if (rawNotice is Map) {
+      if (rawNotice['active'] == true) {
+        noticeBannerText = (rawNotice['message'] ?? rawNotice['title'] ?? '').toString().trim();
+      }
+    } else if (rawNotice is String) {
+      final trimmed = rawNotice.trim();
+      if (trimmed.isNotEmpty &&
+          trimmed != 'false' &&
+          trimmed != 'null' &&
+          !trimmed.startsWith('{') &&
+          !trimmed.contains('status: false') &&
+          !trimmed.contains('active: false')) {
+        noticeBannerText = trimmed;
+      }
+    }
+
+    if (!isPrayerBreak && !isNightBreak && !isOffersClosed && noticeBannerText.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final prayerNote = (status['prayerBreakNote'] ?? 'নামাজের বিরতি চলছে। সাময়িক সময়ের জন্য অফার প্রসেসিং বন্ধ থাকবে।').toString();
-    final nightNote = (status['nightBreakNote'] ?? 'রাতের বিরতি চলছে। সকাল থেকে পুনরায় অফার প্রসেসিং শুরু হবে।').toString();
-    final closedNote = (status['offersClosedNote'] ?? 'আজকের মতো সকল ড্রাইভ অফার বন্ধ রয়েছে।').toString();
+    final prayerNote = _getServiceItemNote(
+      status['prayerBreak'],
+      (status['prayerBreakNote'] ?? '').toString().trim(),
+      'নামাজের বিরতি চলছে। সাময়িক সময়ের জন্য অফার প্রসেসিং বন্ধ থাকবে।',
+    );
+    final nightNote = _getServiceItemNote(
+      status['nightBreak'],
+      (status['nightBreakNote'] ?? '').toString().trim(),
+      'রাতের বিরতি চলছে। সকাল থেকে পুনরায় অফার প্রসেসিং শুরু হবে।',
+    );
+    final closedNote = _getServiceItemNote(
+      status['offersClosed'],
+      (status['offersClosedNote'] ?? '').toString().trim(),
+      'আজকের মতো সকল ড্রাইভ অফার বন্ধ রয়েছে।',
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -495,7 +550,7 @@ class HomeScreen extends StatelessWidget {
             ),
 
           // 4. Custom Broadcast Notice Banner
-          if (noticeBanner.isNotEmpty)
+          if (noticeBannerText.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
@@ -540,7 +595,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          noticeBanner,
+                          noticeBannerText,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.95),
                             fontSize: 13,

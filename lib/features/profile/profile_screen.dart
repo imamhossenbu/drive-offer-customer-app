@@ -337,6 +337,149 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _showViewPinDialog(BuildContext context) async {
+    final app = context.read<AppState>();
+    SoundService.playTap();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 12),
+                Text('পিন লোড হচ্ছে...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final res = await CustomerApiService.instance.getPin();
+      if (!mounted) return;
+      Navigator.pop(context); // close loader
+
+      final data = res['data'] ?? res;
+      final pin = (data['pinCode'] ?? data['pin'] ?? '').toString();
+
+      if (pin.isEmpty) {
+        SoundService.playError();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(app.isBn ? 'কোনো পিন কোড পাওয়া যায়নি।' : 'No PIN code found.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      SoundService.playSuccess();
+      bool obscurePin = false;
+
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => StatefulBuilder(
+          builder: (dialogCtx, setModalState) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.shield_outlined, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(app.isBn ? 'আপনার সিকিউরিটি পিন' : 'Your Security PIN', style: const TextStyle(fontSize: 18)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  app.isBn
+                      ? 'এই পিনটি ড্রাইভ অফার অর্ডার এবং একাউন্ট সিকিউরিটিতে ব্যবহৃত হয়। এটি কারও সাথে শেয়ার করবেন না।'
+                      : 'This PIN is used for placing orders and security. Never share it with anyone.',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        obscurePin ? '••••' : pin.split('').join('   '),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: Icon(
+                          obscurePin ? Icons.visibility : Icons.visibility_off,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          setModalState(() {
+                            obscurePin = !obscurePin;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: pin));
+                    SoundService.playSuccess();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(app.isBn ? 'পিন কপি করা হয়েছে!' : 'PIN copied to clipboard!'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: Text(app.isBn ? 'পিন কপি করুন' : 'Copy PIN'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: Text(app.isBn ? 'ঠিক আছে' : 'OK'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // close loader
+      SoundService.playError();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   void _handleLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -596,6 +739,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
+                  // View PIN
+                  ListTile(
+                    leading: const Icon(Icons.pin_outlined, color: AppColors.primary),
+                    title: Text(app.isBn ? 'আমার সিকিউরিটি পিন দেখুন' : 'View My Security PIN'),
+                    subtitle: Text(app.isBn ? 'আপনার বর্তমান একাউন্ট পিন কোড' : 'Check your current account PIN'),
+                    trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                    onTap: () => _showViewPinDialog(context),
+                  ),
+                  const Divider(height: 1),
+
                   // Change PIN
                   ListTile(
                     leading: const Icon(Icons.lock_reset, color: AppColors.primary),

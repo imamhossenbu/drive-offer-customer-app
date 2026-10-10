@@ -37,11 +37,11 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
   }
 
   Future<void> _handleSendEmail() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
+    final input = _emailController.text.trim();
+    if (input.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('দয়া করে একটি সঠিক ইমেইল এড্রেস লিখুন (Please enter a valid email)'),
+          content: Text('দয়া করে আপনার নিবন্ধিত মোবাইল নম্বর অথবা ইমেইল লিখুন'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -52,7 +52,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
     SoundService.playTap();
 
     try {
-      final res = await CustomerApiService.instance.forgotPin(email: email);
+      final res = await CustomerApiService.instance.forgotPin(emailOrPhone: input);
       final data = res['data'] ?? res;
       _verificationId = data['verificationId']?.toString() ?? '';
 
@@ -63,8 +63,8 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       });
       SoundService.playSuccess();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('রিসেট ওটিপি কোড আপনার ইমেইলে পাঠানো হয়েছে।'),
+        SnackBar(
+          content: Text(data['message'] ?? 'রিসেট ওটিপি কোড পাঠানো হয়েছে।'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -367,11 +367,11 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.mail_outline, color: AppColors.primary, size: 20),
+                child: const Icon(Icons.contact_mail_outlined, color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 10),
               Text(
-                app.isBn ? 'আপনার নিবন্ধিত ইমেইল' : 'Registered Email',
+                app.isBn ? 'আপনার মোবাইল নম্বর বা ইমেইল' : 'Mobile Number or Email',
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
             ],
@@ -379,19 +379,19 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           const SizedBox(height: 8),
           Text(
             app.isBn
-                ? 'একাউন্ট খোলার সময় যে ইমেইল দিয়েছিলেন তা লিখুন। সেখানে একটি ওটিপি ভেরিফিকেশন কোড পাঠানো হবে।'
-                : 'Enter your registered email address. We will send a 6-digit OTP reset code.',
+                ? 'একাউন্ট খোলার সময় যে মোবাইল নম্বর অথবা ইমেইল দিয়েছিলেন তা লিখুন। সেখানে ওটিপি ভেরিফিকেশন কোড পাঠানো হবে।'
+                : 'Enter your registered mobile number or email address to receive OTP code.',
             style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 20),
 
           TextFormField(
             controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
+            keyboardType: TextInputType.text,
             decoration: InputDecoration(
-              labelText: app.isBn ? 'ইমেইল এড্রেস' : 'Email Address',
-              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
-              hintText: 'example@gmail.com',
+              labelText: app.isBn ? 'মোবাইল নম্বর অথবা ইমেইল' : 'Phone or Email',
+              prefixIcon: const Icon(Icons.perm_identity, color: AppColors.primary),
+              hintText: '017XXXXXXXX বা example@gmail.com',
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade300)),

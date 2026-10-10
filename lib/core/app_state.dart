@@ -141,12 +141,18 @@ class TransactionModel {
       }
     }
 
+    final rawStatus = json['status']?.toString().toUpperCase();
+    final typeStr = json['type']?.toString().toUpperCase() ?? 'DEBIT';
+    final statusStr = (rawStatus != null && rawStatus.isNotEmpty)
+        ? rawStatus
+        : (typeStr == 'TOPUP' ? 'COMPLETED' : (typeStr == 'REFUND' ? 'REFUNDED' : 'PENDING'));
+
     return TransactionModel(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-      type: json['type']?.toString().toUpperCase() ?? 'TOPUP',
+      type: typeStr,
       amount: amt,
       balanceAfter: bal,
-      status: json['status']?.toString().toUpperCase() ?? 'COMPLETED',
+      status: statusStr,
       description: desc,
       createdAt: json['createdAt']?.toString() ?? '',
       recipientPhone: phone,

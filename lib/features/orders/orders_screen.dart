@@ -132,9 +132,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       itemCount: filtered.length,
                       itemBuilder: (ctx, index) {
                         final order = filtered[index];
-                        final dateStr = order.createdAt.isNotEmpty
-                            ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.tryParse(order.createdAt) ?? DateTime.now())
-                            : 'Recently';
+                        final dateStr = TimeUtils.formatBst(order.createdAt);
 
                         Color statusColor;
                         Color statusBg;

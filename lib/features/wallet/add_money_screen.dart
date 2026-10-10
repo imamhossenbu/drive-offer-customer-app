@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
 import '../../core/app_state.dart';
@@ -76,6 +75,8 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         _loadDynamicPaymentGateways(isSilent: true);
+        context.read<AppState>().fetchTopUps();
+        context.read<AppState>().fetchMe();
       }
     });
   }
@@ -775,9 +776,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                           ? Icons.hourglass_top_rounded
                           : (isPending ? Icons.schedule_rounded : Icons.cancel_rounded));
 
-                  final dateStr = topUp.createdAt.isNotEmpty
-                      ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.tryParse(topUp.createdAt) ?? DateTime.now())
-                      : 'Just now';
+                  final dateStr = TimeUtils.formatBst(topUp.createdAt);
 
                   final displayTxId = topUp.transactionId.isNotEmpty
                       ? topUp.transactionId

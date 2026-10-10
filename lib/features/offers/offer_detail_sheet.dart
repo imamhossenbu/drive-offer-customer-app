@@ -69,12 +69,27 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
 
     final app = context.read<AppState>();
     final serviceStatus = app.serviceStatus;
-    if (serviceStatus['offersClosed'] == true) {
+    final isOffersClosed = serviceStatus['offersClosed'] == true ||
+        (serviceStatus['offersClosed'] is Map && serviceStatus['offersClosed']['active'] == true);
+    if (isOffersClosed) {
       SoundService.playError();
       final note = (serviceStatus['offersClosedNote'] ?? 'আজকের মতো সকল ড্রাইভ অফার বন্ধ রয়েছে।').toString();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(note),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final enteredPin = _pinController.text.trim();
+    if (enteredPin.length < 4) {
+      SoundService.playError();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(app.isBn ? 'সঠিক ৪-৬ ডিজিটের পিন নম্বর দিন।' : 'Enter a valid 4-6 digit PIN.'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -103,6 +118,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
         offerId: widget.offer.id,
         offerType: widget.offer.type,
         recipientPhone: _phoneController.text.trim(),
+        pin: enteredPin,
       );
 
       final data = res['data'] ?? res;
@@ -448,6 +464,9 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
                     return 'সিকিউরিটি পিন লিখুন';
+                  }
+                  if (v.trim().length < 4) {
+                    return 'কমপক্ষে ৪ ডিজিটের পিন দিন';
                   }
                   return null;
                 },

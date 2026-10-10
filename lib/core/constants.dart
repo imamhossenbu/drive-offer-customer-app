@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AppColors {
   // Brand Primary & Accents
@@ -79,4 +80,18 @@ class AppConstants {
   static const String defaultBaseUrl = 'https://alokito-telecom-backend-1.onrender.com/api/v1';
   static const String localBaseUrl = 'http://localhost:4000/api/v1';
   static const String emulatorBaseUrl = 'http://10.0.2.2:4000/api/v1';
+}
+
+class TimeUtils {
+  /// Converts ISO datetime string to Bangladesh Standard Time (BST, UTC+6)
+  static String formatBst(String? isoString, [String pattern = 'dd MMM yyyy, hh:mm a']) {
+    if (isoString == null || isoString.isEmpty) return 'Just now';
+    try {
+      final dt = DateTime.parse(isoString);
+      final bst = dt.toUtc().add(const Duration(hours: 6));
+      return DateFormat(pattern).format(bst);
+    } catch (_) {
+      return isoString;
+    }
+  }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
 import '../../core/constants.dart';
@@ -48,6 +47,63 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
         duration: const Duration(seconds: 2),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status, bool isBn) {
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
+      case 'VERIFIED':
+        bg = const Color(0xFFDCFCE7);
+        fg = const Color(0xFF16A34A);
+        label = isBn ? 'সম্পন্ন' : 'COMPLETED';
+        break;
+      case 'PENDING':
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        label = isBn ? 'অপেক্ষমাণ' : 'PENDING';
+        break;
+      case 'CANCELLED':
+      case 'CANCELED':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFDC2626);
+        label = isBn ? 'বাতিল' : 'CANCELLED';
+        break;
+      case 'REFUNDED':
+        bg = const Color(0xFFEDE9FE);
+        fg = const Color(0xFF7C3AED);
+        label = isBn ? 'রিফান্ডেড' : 'REFUNDED';
+        break;
+      case 'FAILED':
+      case 'REJECTED':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFDC2626);
+        label = isBn ? 'ব্যর্থ' : 'FAILED';
+        break;
+      default:
+        bg = Colors.grey.shade100;
+        fg = Colors.grey.shade700;
+        label = status;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.bold,
+          color: fg,
+        ),
       ),
     );
   }
@@ -117,10 +173,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                       final tx = app.transactions[index];
                       final isCredit = tx.type == 'TOPUP' || tx.type == 'REFUND' || tx.type == 'BONUS';
 
-                      final dateStr = tx.createdAt.isNotEmpty
-                          ? DateFormat('dd MMM yyyy, hh:mm a')
-                              .format(DateTime.tryParse(tx.createdAt) ?? DateTime.now())
-                          : 'Just now';
+                      final dateStr = TimeUtils.formatBst(tx.createdAt);
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -275,27 +328,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: tx.status == 'COMPLETED'
-                                        ? AppColors.success.withOpacity(0.12)
-                                        : (tx.status == 'PENDING'
-                                            ? AppColors.secondary.withOpacity(0.12)
-                                            : AppColors.error.withOpacity(0.12)),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    tx.status,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: tx.status == 'COMPLETED'
-                                          ? AppColors.success
-                                          : (tx.status == 'PENDING' ? AppColors.secondary : AppColors.error),
-                                    ),
-                                  ),
-                                ),
+                                _buildStatusBadge(tx.status, app.isBn),
                               ],
                             ),
                           ],
@@ -379,10 +412,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                               ? Icons.hourglass_top_rounded
                               : (isPending ? Icons.schedule_rounded : Icons.cancel_rounded));
 
-                      final dateStr = topUp.createdAt.isNotEmpty
-                          ? DateFormat('dd MMM yyyy, hh:mm a')
-                              .format(DateTime.tryParse(topUp.createdAt) ?? DateTime.now())
-                          : 'Just now';
+                      final dateStr = TimeUtils.formatBst(topUp.createdAt);
 
                       final displayTxId = topUp.transactionId.isNotEmpty
                           ? topUp.transactionId

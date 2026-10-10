@@ -249,11 +249,19 @@ class CustomerApiService {
     return data;
   }
 
-  Future<Map<String, dynamic>> forgotPin({required String email}) async {
+  Future<Map<String, dynamic>> forgotPin({required String emailOrPhone}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/forgot-pin'),
       headers: _headers(withAuth: false),
-      body: jsonEncode({'email': email.trim()}),
+      body: jsonEncode({'email': emailOrPhone.trim()}),
+    );
+    return _parse(res);
+  }
+
+  Future<Map<String, dynamic>> getPin() async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/users/me/pin'),
+      headers: _headers(),
     );
     return _parse(res);
   }
@@ -369,6 +377,7 @@ class CustomerApiService {
     required String offerId,
     required String offerType, // "DRIVE" or "REGULAR" or "NORMAL"
     required String recipientPhone,
+    required String pin,
   }) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/orders'),
@@ -377,6 +386,7 @@ class CustomerApiService {
         'offerId': offerId,
         'offerType': offerType,
         'phone': recipientPhone.trim(),
+        'pin': pin.trim(),
       }),
     );
     return _parse(res);

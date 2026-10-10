@@ -46,9 +46,7 @@ class NotificationsScreen extends StatelessWidget {
                 itemBuilder: (ctx, index) {
                   final notif = app.notifications[index];
                   final isUnread = !notif.isRead;
-                  final dateStr = notif.createdAt.isNotEmpty
-                      ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.tryParse(notif.createdAt) ?? DateTime.now())
-                      : 'Just now';
+                  final dateStr = TimeUtils.formatBst(notif.createdAt);
 
                   return InkWell(
                     onTap: () {
