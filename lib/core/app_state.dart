@@ -269,6 +269,8 @@ class AppState extends ChangeNotifier {
   List<NotificationItem> _notifications = [];
   List<Map<String, dynamic>> _rawOperators = [];
   Map<String, dynamic> _serviceStatus = {};
+  Map<String, dynamic> _contactSupport = {};
+  Map<String, dynamic> _paymentNumbers = {};
 
   bool _isLoadingOffers = false;
   bool _isLoadingOrders = false;
@@ -305,6 +307,13 @@ class AppState extends ChangeNotifier {
   List<NotificationItem> get notifications => _notifications;
   List<Map<String, dynamic>> get operators => _rawOperators;
   Map<String, dynamic> get serviceStatus => _serviceStatus;
+  Map<String, dynamic> get contactSupport => _contactSupport;
+  Map<String, dynamic> get paymentNumbers => _paymentNumbers;
+
+  String get whatsappSupport => _contactSupport['whatsapp']?.toString() ?? '';
+  String get facebookSupport => _contactSupport['facebook']?.toString() ?? '';
+  String get youtubeSupport => _contactSupport['youtube']?.toString() ?? '';
+  String get helplinePhone => _contactSupport['offlinePhone']?.toString() ?? '';
 
   bool get isLoadingOffers => _isLoadingOffers;
   bool get isLoadingOrders => _isLoadingOrders;
@@ -567,8 +576,16 @@ class AppState extends ChangeNotifier {
     try {
       final res = await CustomerApiService.instance.getSettings();
       final data = res['data'] ?? res;
-      if (data is Map && data['serviceStatus'] is Map) {
-        _serviceStatus = Map<String, dynamic>.from(data['serviceStatus'] as Map);
+      if (data is Map) {
+        if (data['serviceStatus'] is Map) {
+          _serviceStatus = Map<String, dynamic>.from(data['serviceStatus'] as Map);
+        }
+        if (data['contactSupport'] is Map) {
+          _contactSupport = Map<String, dynamic>.from(data['contactSupport'] as Map);
+        }
+        if (data['paymentNumbers'] is Map) {
+          _paymentNumbers = Map<String, dynamic>.from(data['paymentNumbers'] as Map);
+        }
         notifyListeners();
       }
     } catch (_) {}

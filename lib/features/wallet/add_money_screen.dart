@@ -111,33 +111,64 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
         if (item is Map) {
           final prov = (item['provider'] ?? item['paymentProvider'] ?? '').toString().toUpperCase().trim();
           final phone = (item['paymentNumber'] ?? item['phoneNumber'] ?? '').toString().trim();
+          final type = (item['accountType'] ?? item['type'] ?? '').toString().trim();
+          final active = item['active'] != false;
           if (prov.isNotEmpty && phone.isNotEmpty && _gateways.containsKey(prov)) {
             if (_gateways[prov]!['number'] != phone) {
               _gateways[prov]!['number'] = phone;
               changed = true;
             }
+            if (type.isNotEmpty && _gateways[prov]!['type'] != type) {
+              _gateways[prov]!['type'] = type;
+              changed = true;
+            }
+            _gateways[prov]!['active'] = active;
             updatedProviders.add(prov);
           }
         }
       }
 
-      // 2. Check fallbackPaymentNumbers in systemSettings
+      // 2. Check paymentNumbers or fallbackPaymentNumbers in systemSettings
       final setData = setRes['data'] ?? setRes;
-      if (setData is Map && setData['fallbackPaymentNumbers'] is Map) {
-        final fallbacks = setData['fallbackPaymentNumbers'] as Map;
-        fallbacks.forEach((k, v) {
-          final prov = k.toString().toUpperCase().trim();
-          final phone = v?.toString().trim() ?? '';
-          if (_gateways.containsKey(prov) && phone.isNotEmpty) {
-            // Update if pmList didn't provide a number or if currently empty
-            if (!updatedProviders.contains(prov) || (_gateways[prov]!['number'] as String).isEmpty) {
-              if (_gateways[prov]!['number'] != phone) {
-                _gateways[prov]!['number'] = phone;
-                changed = true;
+      if (setData is Map) {
+        if (setData['paymentNumbers'] is Map) {
+          final pnums = setData['paymentNumbers'] as Map;
+          pnums.forEach((k, v) {
+            final prov = k.toString().toUpperCase().trim();
+            if (_gateways.containsKey(prov) && v is Map) {
+              final phone = v['number']?.toString().trim() ?? '';
+              final type = v['type']?.toString().trim() ?? '';
+              final active = v['active'] != false;
+              if (phone.isNotEmpty) {
+                if (_gateways[prov]!['number'] != phone) {
+                  _gateways[prov]!['number'] = phone;
+                  changed = true;
+                }
+                if (type.isNotEmpty && _gateways[prov]!['type'] != type) {
+                  _gateways[prov]!['type'] = type;
+                  changed = true;
+                }
+                _gateways[prov]!['active'] = active;
+                updatedProviders.add(prov);
               }
             }
-          }
-        });
+          });
+        }
+        if (setData['fallbackPaymentNumbers'] is Map) {
+          final fallbacks = setData['fallbackPaymentNumbers'] as Map;
+          fallbacks.forEach((k, v) {
+            final prov = k.toString().toUpperCase().trim();
+            final phone = v?.toString().trim() ?? '';
+            if (_gateways.containsKey(prov) && phone.isNotEmpty) {
+              if (!updatedProviders.contains(prov) || (_gateways[prov]!['number'] as String).isEmpty) {
+                if (_gateways[prov]!['number'] != phone) {
+                  _gateways[prov]!['number'] = phone;
+                  changed = true;
+                }
+              }
+            }
+          });
+        }
       }
 
       if (changed && mounted) {

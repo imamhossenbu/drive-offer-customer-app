@@ -12,6 +12,7 @@ import '../../core/sound_service.dart';
 import '../auth/login_screen.dart';
 import '../wallet/transaction_history_screen.dart';
 import '../../core/app_update_service.dart';
+import '../../core/support_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -810,13 +811,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListTile(
                     leading: const Icon(Icons.headset_mic_outlined, color: AppColors.primary),
                     title: Text(app.isBn ? 'কাস্টমার সাপোর্ট ও হেল্পলাইন' : 'Support Helpline'),
-                    subtitle: const Text('WhatsApp: +880 1890 000000'),
+                    subtitle: Text(
+                      app.whatsappSupport.isNotEmpty
+                          ? 'WhatsApp: ${app.whatsappSupport}'
+                          : (app.helplinePhone.isNotEmpty
+                              ? 'Helpline: ${app.helplinePhone}'
+                              : (app.isBn ? 'হোয়াটসঅ্যাপ, ফোন ও সোশ্যাল লিংক' : 'WhatsApp, Call & Social')),
+                    ),
                     trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Helpline WhatsApp: +8801890000000')),
-                      );
-                    },
+                    onTap: () => SupportLauncher.showSupportModal(context, app),
                   ),
                   const Divider(height: 1),
 

@@ -10,6 +10,7 @@ import '../../core/widgets/prayer_times_card.dart';
 import '../notifications/notifications_screen.dart';
 import '../offers/offer_detail_sheet.dart';
 import '../wallet/transaction_history_screen.dart';
+import '../../core/support_launcher.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(int) onNavigateTab;
@@ -60,6 +61,10 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   // Quick Actions Grid
                   _buildQuickActionGrid(context, app),
+
+                  const SizedBox(height: 14),
+                  // 24/7 Helpline & Support Bar
+                  _buildCustomerSupportBar(context, app),
 
                   const SizedBox(height: 24),
                   // Trending Drive Offers Header
@@ -846,6 +851,90 @@ class HomeScreen extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCustomerSupportBar(BuildContext context, AppState app) {
+    final isBn = app.isBn;
+    final wa = app.whatsappSupport;
+    final fb = app.facebookSupport;
+    final yt = app.youtubeSupport;
+    final phone = app.helplinePhone;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.support_agent_rounded, color: Color(0xFF15803D), size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: InkWell(
+                onTap: () => SupportLauncher.showSupportModal(context, app),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isBn ? 'সাপোর্ট ও হেল্পলাইন' : 'Support & Helpline',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                    ),
+                    Text(
+                      isBn ? 'যেকোনো প্রয়োজনে যোগাযোগ' : 'Connect 24/7 with admin',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_rounded, size: 20, color: Color(0xFF25D366)),
+              tooltip: 'WhatsApp',
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                SoundService.playTap();
+                SupportLauncher.launchWhatsApp(context, wa.isNotEmpty ? wa : '01890000000');
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.phone_in_talk_rounded, size: 20, color: Color(0xFF0284C7)),
+              tooltip: isBn ? 'কল করুন' : 'Helpline Call',
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                SoundService.playTap();
+                SupportLauncher.launchCall(context, phone.isNotEmpty ? phone : '01890000000');
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_horiz_rounded, size: 20, color: Color(0xFF64748B)),
+              tooltip: isBn ? 'সকল লিংক' : 'All Links',
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                SupportLauncher.showSupportModal(context, app);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
