@@ -857,6 +857,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildCustomerSupportBar(BuildContext context, AppState app) {
     final isBn = app.isBn;
+    final tg = app.telegramSupport;
     final wa = app.whatsappSupport;
     final fb = app.facebookSupport;
     final yt = app.youtubeSupport;
@@ -865,7 +866,7 @@ class HomeScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -878,60 +879,165 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDCFCE7),
-                borderRadius: BorderRadius.circular(8),
+            // Top Support Text Header
+            InkWell(
+              onTap: () => SupportLauncher.showSupportModal(context, app),
+              borderRadius: BorderRadius.circular(8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.support_agent_rounded, color: Color(0xFF15803D), size: 18),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isBn ? 'সাপোর্ট ও সরাসরি হেল্পলাইন' : 'Customer Support & Helpline',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                        ),
+                        Text(
+                          isBn ? 'যেকোনো প্রয়োজনে সরাসরি যোগাযোগ করুন' : 'Tap any icon below for 24/7 direct assistance',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.support_agent_rounded, color: Color(0xFF15803D), size: 20),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: InkWell(
-                onTap: () => SupportLauncher.showSupportModal(context, app),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isBn ? 'সাপোর্ট ও হেল্পলাইন' : 'Support & Helpline',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                    ),
-                    Text(
-                      isBn ? 'যেকোনো প্রয়োজনে যোগাযোগ' : 'Connect 24/7 with admin',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
+            const SizedBox(height: 12),
+
+            // All 5 Support Buttons in 1 Line (No 3 dots, all dynamic)
+            Row(
+              children: [
+                // 1. WhatsApp
+                Expanded(
+                  child: _buildSupportIconAction(
+                    context: context,
+                    label: 'WhatsApp',
+                    icon: Icons.chat_bubble_rounded,
+                    color: const Color(0xFF25D366),
+                    bgColor: const Color(0xFFE8F5E9),
+                    onTap: () {
+                      SoundService.playTap();
+                      SupportLauncher.launchWhatsApp(context, wa);
+                    },
+                  ),
                 ),
+                const SizedBox(width: 6),
+
+                // 2. Call
+                Expanded(
+                  child: _buildSupportIconAction(
+                    context: context,
+                    label: isBn ? 'কল' : 'Call',
+                    icon: Icons.phone_in_talk_rounded,
+                    color: const Color(0xFF0284C7),
+                    bgColor: const Color(0xFFE0F2FE),
+                    onTap: () {
+                      SoundService.playTap();
+                      SupportLauncher.launchCall(context, phone);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // 3. Telegram
+                Expanded(
+                  child: _buildSupportIconAction(
+                    context: context,
+                    label: 'Telegram',
+                    icon: Icons.send_rounded,
+                    color: const Color(0xFF0088CC),
+                    bgColor: const Color(0xFFE0F2FE),
+                    onTap: () {
+                      SoundService.playTap();
+                      SupportLauncher.launchTelegram(context, tg);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // 4. Facebook
+                Expanded(
+                  child: _buildSupportIconAction(
+                    context: context,
+                    label: 'Facebook',
+                    icon: Icons.facebook_rounded,
+                    color: const Color(0xFF1877F2),
+                    bgColor: const Color(0xFFEFF6FF),
+                    onTap: () {
+                      SoundService.playTap();
+                      SupportLauncher.launchUrlString(context, fb, 'Facebook');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // 5. YouTube
+                Expanded(
+                  child: _buildSupportIconAction(
+                    context: context,
+                    label: 'YouTube',
+                    icon: Icons.smart_display_rounded,
+                    color: const Color(0xFFFF0000),
+                    bgColor: const Color(0xFFFEF2F2),
+                    onTap: () {
+                      SoundService.playTap();
+                      SupportLauncher.launchUrlString(context, yt, 'YouTube');
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSupportIconAction({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_rounded, size: 20, color: Color(0xFF25D366)),
-              tooltip: 'WhatsApp',
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                SoundService.playTap();
-                SupportLauncher.launchWhatsApp(context, wa.isNotEmpty ? wa : '01890000000');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.phone_in_talk_rounded, size: 20, color: Color(0xFF0284C7)),
-              tooltip: isBn ? 'কল করুন' : 'Helpline Call',
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                SoundService.playTap();
-                SupportLauncher.launchCall(context, phone.isNotEmpty ? phone : '01890000000');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.more_horiz_rounded, size: 20, color: Color(0xFF64748B)),
-              tooltip: isBn ? 'সকল লিংক' : 'All Links',
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                SupportLauncher.showSupportModal(context, app);
-              },
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

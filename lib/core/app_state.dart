@@ -310,6 +310,7 @@ class AppState extends ChangeNotifier {
   Map<String, dynamic> get contactSupport => _contactSupport;
   Map<String, dynamic> get paymentNumbers => _paymentNumbers;
 
+  String get telegramSupport => _contactSupport['telegram']?.toString() ?? '';
   String get whatsappSupport => _contactSupport['whatsapp']?.toString() ?? '';
   String get facebookSupport => _contactSupport['facebook']?.toString() ?? '';
   String get youtubeSupport => _contactSupport['youtube']?.toString() ?? '';

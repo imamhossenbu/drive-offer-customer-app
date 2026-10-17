@@ -63,6 +63,38 @@ class SupportLauncher {
     }
   }
 
+  static Future<void> launchTelegram(BuildContext context, String raw) async {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('টেলিগ্রাম সাপোর্ট লিংক সেট করা নেই')),
+      );
+      return;
+    }
+
+    Uri uri;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      uri = Uri.parse(trimmed);
+    } else {
+      final username = trimmed.startsWith('@') ? trimmed.substring(1) : trimmed;
+      uri = Uri.parse('https://t.me/$username');
+    }
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('টেলিগ্রাম খোলা যাচ্ছে না: $e')),
+        );
+      }
+    }
+  }
+
   static Future<void> launchUrlString(BuildContext context, String rawUrl, String label) async {
     String url = rawUrl.trim();
     if (url.isEmpty) {
@@ -93,6 +125,7 @@ class SupportLauncher {
   static void showSupportModal(BuildContext context, AppState app) {
     SoundService.playTap();
     final isBn = app.isBn;
+    final tg = app.telegramSupport;
     final wa = app.whatsappSupport;
     final fb = app.facebookSupport;
     final yt = app.youtubeSupport;
@@ -168,6 +201,21 @@ class SupportLauncher {
             ),
             const SizedBox(height: 10),
 
+            // Telegram Support
+            _buildSupportTile(
+              context: ctx,
+              title: 'Telegram Channel & Support',
+              subtitle: tg.isNotEmpty ? tg : (isBn ? 'টেলিগ্রাম গ্রুপ ও সাপোর্ট' : 'Join Telegram channel'),
+              icon: Icons.send_rounded,
+              color: const Color(0xFF0088CC),
+              bgColor: const Color(0xFFE0F2FE),
+              onTap: () {
+                Navigator.pop(ctx);
+                launchTelegram(context, tg);
+              },
+            ),
+            const SizedBox(height: 10),
+
             // Helpline Phone Call
             _buildSupportTile(
               context: ctx,
@@ -178,7 +226,7 @@ class SupportLauncher {
               bgColor: const Color(0xFFE0F2FE),
               onTap: () {
                 Navigator.pop(ctx);
-                launchCall(context, phone.isNotEmpty ? phone : '01890000000');
+                launchCall(context, phone);
               },
             ),
             const SizedBox(height: 10),
