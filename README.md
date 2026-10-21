@@ -194,7 +194,7 @@ drive-offer-customer-app/
 ```dart
 class AppDefaults {
   // লাইভ প্রোডাকশন ব্যাকএন্ড (Cloud Render)
-  static const String defaultProdUrl = 'https://alokito-telecom-backend-1.onrender.com/api/v1';
+  static const String defaultProdUrl = 'https://alokito-telecom-backend-sqgt.onrender.com/api/v1';
 
   // লোকাল ডেভেলপমেন্ট
   static const String defaultLocalUrl = 'http://localhost:4000/api/v1';

@@ -77,7 +77,7 @@ class AppConstants {
   static const String appTaglineEn = 'Best Drive Offers & Instant Top-Up';
   
   // Default API Endpoint
-  static const String defaultBaseUrl = 'https://alokito-telecom-backend-1.onrender.com/api/v1';
+  static const String defaultBaseUrl = 'https://alokito-telecom-backend-sqgt.onrender.com/api/v1';
   static const String localBaseUrl = 'http://localhost:4000/api/v1';
   static const String emulatorBaseUrl = 'http://10.0.2.2:4000/api/v1';
 }
