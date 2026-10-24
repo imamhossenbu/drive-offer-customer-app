@@ -111,9 +111,9 @@ class OfferCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           color: AppColors.textDark,
                           letterSpacing: -0.2,
+                          height: 1.3,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                       ),
                       const SizedBox(height: 5),
 
