@@ -1227,7 +1227,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             OutlinedButton(
               onPressed: (_isLoading || _isScanning) ? null : _prevStep,
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(app.isBn ? 'পূর্ববর্তী' : 'Back'),
@@ -1250,7 +1250,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 foregroundColor: Colors.white,
                 elevation: 3,
                 shadowColor: AppColors.primary.withOpacity(0.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: (_isLoading || _isScanning)

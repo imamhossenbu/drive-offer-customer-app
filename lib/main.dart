@@ -74,7 +74,35 @@ class CustomerApp extends StatelessWidget {
                 color: Colors.white,
               ),
               elevation: 2,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              // All buttons share one height (50, as a minimum so long text grows instead of clipping) so rows of mixed
+              // buttons line up and every screen looks consistent. Small
+              // in-card buttons use a 36 height set locally.
+              minimumSize: const Size(64, 50),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.center,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(64, 50),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.center,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 50),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.center,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),

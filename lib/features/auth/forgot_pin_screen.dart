@@ -402,7 +402,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           // Action Button with explicit White Text
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleSendEmail,
               style: ElevatedButton.styleFrom(
@@ -504,7 +504,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           // Action Button
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleVerifyCode,
               style: ElevatedButton.styleFrom(
@@ -642,7 +642,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           // Confirm Action Button
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleResetPin,
               style: ElevatedButton.styleFrom(

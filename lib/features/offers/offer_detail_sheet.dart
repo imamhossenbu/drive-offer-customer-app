@@ -195,7 +195,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 child: const Text('ঠিক আছে', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
@@ -477,7 +477,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
               // Confirm Order Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: _isLoading || !hasEnoughBalance ? null : _handleConfirmOrder,
                   style: ElevatedButton.styleFrom(

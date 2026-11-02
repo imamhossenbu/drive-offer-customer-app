@@ -314,7 +314,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 child: const Text('ঠিক আছে', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
@@ -571,7 +571,8 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: currentGateway['color'] as Color,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                minimumSize: const Size(0, 36),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
@@ -664,7 +665,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
               // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(

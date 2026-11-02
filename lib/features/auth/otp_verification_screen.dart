@@ -280,7 +280,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               // Verify Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleVerify,
                   style: ElevatedButton.styleFrom(

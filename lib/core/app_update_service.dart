@@ -42,7 +42,9 @@ class AppUpdateService {
       final releaseNotes = (appVerData['releaseNotes'] ?? 'নতুন ফিচার ও পারফরম্যান্স আপডেট।').toString().trim();
 
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 1;
+      // Split-per-ABI APKs report versionCode as abi*1000 + build
+      // (e.g. 2010 for arm64 build 10), so strip the ABI prefix.
+      final currentBuild = (int.tryParse(packageInfo.buildNumber) ?? 1) % 1000;
       final currentVersion = packageInfo.version;
 
       final bool hasUpdate = serverBuild > currentBuild ||
@@ -248,7 +250,7 @@ class AppUpdateService {
                                 Navigator.pop(dialogCtx);
                               },
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 side: BorderSide(color: Colors.grey.shade300),
                               ),
@@ -272,7 +274,7 @@ class AppUpdateService {
                                     ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 0,
                             ),

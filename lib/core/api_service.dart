@@ -337,17 +337,37 @@ class CustomerApiService {
 
   // ── 3. Offers & Operators ────────────────────────────────────────────────
 
+  /// Fetches ALL active drive offers by walking every page (backend caps
+  /// each page at 100), so older offers never disappear from the app.
   Future<Map<String, dynamic>> getDriveOffers({String? operator, String? category}) async {
-    final params = <String, String>{};
-    if (operator != null && operator != 'ALL') {
-      params['operator'] = operator;
-      params['operatorId'] = operator;
-    }
-    if (category != null && category != 'ALL') params['category'] = category;
+    const limit = 100;
+    final allDocs = <dynamic>[];
+    Map<String, dynamic> last = {};
+    for (var page = 1; page <= 100; page++) {
+      final params = <String, String>{'page': '$page', 'limit': '$limit'};
+      if (operator != null && operator != 'ALL') {
+        params['operator'] = operator;
+        params['operatorId'] = operator;
+      }
+      if (category != null && category != 'ALL') params['category'] = category;
 
-    final uri = Uri.parse('$_baseUrl/drive-offers').replace(queryParameters: params.isEmpty ? null : params);
-    final res = await http.get(uri, headers: _headers());
-    return _parse(res);
+      final uri = Uri.parse('$_baseUrl/drive-offers').replace(queryParameters: params);
+      final res = await http.get(uri, headers: _headers());
+      last = _parse(res);
+
+      final data = last['data'];
+      final List docs = data is List
+          ? data
+          : (data is Map && data['docs'] is List ? data['docs'] as List : const []);
+      allDocs.addAll(docs);
+
+      final total = data is Map && data['total'] is num ? (data['total'] as num).toInt() : null;
+      if (data is List || docs.length < limit || (total != null && allDocs.length >= total)) break;
+    }
+    return {
+      ...last,
+      'data': {'total': allDocs.length, 'page': 1, 'limit': allDocs.length, 'docs': allDocs},
+    };
   }
 
   Future<Map<String, dynamic>> getRegularOffers({String? operator, String? category}) async {
