@@ -24,7 +24,7 @@ class SupportLauncher {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('কল করা যাচ্ছে না: $e')),
+          const SnackBar(content: Text('কল করা যাচ্ছে না। আবার চেষ্টা করুন।')),
         );
       }
     }
@@ -57,7 +57,7 @@ class SupportLauncher {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('হোয়াটসঅ্যাপ খোলা যাচ্ছে না: $e')),
+          const SnackBar(content: Text('হোয়াটসঅ্যাপ খোলা যাচ্ছে না। অ্যাপটি ইনস্টল আছে কিনা দেখুন।')),
         );
       }
     }
@@ -89,7 +89,7 @@ class SupportLauncher {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('টেলিগ্রাম খোলা যাচ্ছে না: $e')),
+          const SnackBar(content: Text('টেলিগ্রাম খোলা যাচ্ছে না। অ্যাপটি ইনস্টল আছে কিনা দেখুন।')),
         );
       }
     }
@@ -116,7 +116,7 @@ class SupportLauncher {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$label খোলা যাচ্ছে না: $e')),
+          SnackBar(content: Text('$label খোলা যাচ্ছে না। আবার চেষ্টা করুন।')),
         );
       }
     }
@@ -141,7 +141,10 @@ class SupportLauncher {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Column(
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -196,7 +199,7 @@ class SupportLauncher {
               bgColor: const Color(0xFFE8F5E9),
               onTap: () {
                 Navigator.pop(ctx);
-                launchWhatsApp(context, wa.isNotEmpty ? wa : '01890000000');
+                launchWhatsApp(context, wa);
               },
             ),
             const SizedBox(height: 10),
@@ -260,6 +263,8 @@ class SupportLauncher {
               },
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

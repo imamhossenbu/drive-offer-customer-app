@@ -64,8 +64,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
         label = isBn ? 'সম্পন্ন' : 'COMPLETED';
         break;
       case 'PENDING':
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFFD97706);
+        bg = AppColors.warningBg;
+        fg = AppColors.warning;
         label = isBn ? 'অপেক্ষমাণ' : 'PENDING';
         break;
       case 'CANCELLED':
@@ -253,7 +253,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                                   Text(
                                     tx.description.isNotEmpty
                                         ? tx.description
-                                        : (isCredit ? 'Wallet Top-Up' : 'Offer Purchase'),
+                                        : (isCredit
+                                            ? (app.isBn ? 'ওয়ালেট টপ-আপ' : 'Wallet Top-Up')
+                                            : (app.isBn ? 'অফার ক্রয়' : 'Offer Purchase')),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -303,7 +305,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                                   if (tx.balanceAfter > 0) ...[
                                     const SizedBox(height: 6),
                                     Text(
-                                      'Balance: ৳${tx.balanceAfter.toStringAsFixed(2)}',
+                                      '${app.isBn ? 'ব্যালেন্স' : 'Balance'}: ${app.formatCurrency(tx.balanceAfter)}',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: Colors.grey.shade600,
@@ -320,7 +322,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '${isCredit ? '+' : '-'}৳${tx.amount.toStringAsFixed(2)}',
+                                  '${isCredit ? '+' : '-'}${app.formatCurrency(tx.amount)}',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -369,16 +371,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                       Color provColor = AppColors.primary;
                       String provAsset = 'assets/payments/bkash.png';
                       if (topUp.provider == 'BKASH') {
-                        provColor = const Color(0xFFE2136E);
+                        provColor = AppColors.bkash;
                         provAsset = 'assets/payments/bkash.png';
                       } else if (topUp.provider == 'NAGAD') {
-                        provColor = const Color(0xFFF7941D);
+                        provColor = AppColors.nagad;
                         provAsset = 'assets/payments/nagad.png';
                       } else if (topUp.provider == 'ROCKET') {
-                        provColor = const Color(0xFF8C3494);
+                        provColor = AppColors.rocket;
                         provAsset = 'assets/payments/rocket.png';
                       } else if (topUp.provider == 'UPAY') {
-                        provColor = const Color(0xFF0047BA);
+                        provColor = AppColors.upay;
                         provAsset = 'assets/payments/upay.png';
                       }
 
@@ -389,14 +391,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                       final statusColor = isVerified
                           ? AppColors.success
                           : (isVerifying
-                              ? const Color(0xFFD97706)
-                              : (isPending ? const Color(0xFF2563EB) : AppColors.error));
+                              ? AppColors.info
+                              : (isPending ? AppColors.warning : AppColors.error));
 
                       final statusBg = isVerified
                           ? const Color(0xFFDCFCE7)
                           : (isVerifying
-                              ? const Color(0xFFFEF3C7)
-                              : (isPending ? const Color(0xFFDBEAFE) : const Color(0xFFFEE2E2)));
+                              ? AppColors.infoBg
+                              : (isPending ? AppColors.warningBg : AppColors.dangerBg));
 
                       final statusLabel = isVerified
                           ? (app.isBn ? 'সফল (যুক্ত হয়েছে)' : 'Verified')
@@ -464,7 +466,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Row(
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             Text(
                                               '${topUp.provider} টপ-আপ',
@@ -474,7 +479,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                                                 color: provColor,
                                               ),
                                             ),
-                                            const SizedBox(width: 8),
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                               decoration: BoxDecoration(
@@ -519,7 +523,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> wit
                                     ),
                                   ),
                                   Text(
-                                    '+৳${topUp.amount.toStringAsFixed(0)}',
+                                    '+${app.formatCurrency(topUp.amount)}',
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,

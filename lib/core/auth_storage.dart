@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'constants.dart';
+import 'remote_config.dart';
 
 class AuthStorage {
   static SharedPreferences? _prefs;
@@ -64,7 +65,10 @@ class AuthStorage {
   }
 
   static String getServerUrl() {
-    return _prefs?.getString(_keyServerUrl) ?? AppConstants.defaultBaseUrl;
+    // Remote config (GitHub) wins so the backend can move hosts without a new APK.
+    return _prefs?.getString(RemoteConfig.cachedApiBaseUrlKey) ??
+        _prefs?.getString(_keyServerUrl) ??
+        AppConstants.defaultBaseUrl;
   }
 
   // Language & Sound

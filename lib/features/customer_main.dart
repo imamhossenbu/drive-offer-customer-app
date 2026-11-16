@@ -20,36 +20,75 @@ class CustomerMain extends StatefulWidget {
   State<CustomerMain> createState() => _CustomerMainState();
 }
 
-class _CustomerMainState extends State<CustomerMain> {
+class _CustomerMainState extends State<CustomerMain> with WidgetsBindingObserver {
   late int _currentIndex;
   Timer? _statusTimer;
+
+  /// Live sync interval. Was 4s (5 requests every 4s per open app), which burned
+  /// through the hosting bandwidth quota. Responses are also ETag-cached now.
+  static const Duration _pollInterval = Duration(seconds: 15);
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialTab;
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.read<AppState>().isLoggedIn) {
         context.read<AppState>().syncFromStorage();
         context.read<AppState>().refreshAll();
-        AppUpdateService.instance.checkForUpdate(context);
       }
+      _checkForUpdate();
     });
-    // Real-time live synchronization: polls live balance, orders, top-ups, notices, and notifications every 4 seconds
-    _statusTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted && context.read<AppState>().isLoggedIn) {
-        final app = context.read<AppState>();
-        app.fetchMe();
-        app.fetchOrders(isSilent: true);
-        app.fetchTopUps(isSilent: true);
-        app.fetchServiceStatus();
-        app.fetchNotifications();
-      }
-    });
+    _startPolling();
+  }
+
+  DateTime? _lastUpdateCheck;
+
+  /// Shows the update screen when a newer version is published. Runs at start
+  /// and when the app comes back to the foreground, at most every 6 hours.
+  void _checkForUpdate() {
+    final now = DateTime.now();
+    if (_lastUpdateCheck != null && now.difference(_lastUpdateCheck!) < const Duration(hours: 6)) {
+      return;
+    }
+    _lastUpdateCheck = now;
+    if (mounted) AppUpdateService.instance.checkForUpdate(context);
+  }
+
+  void _startPolling() {
+    _statusTimer?.cancel();
+    _statusTimer = Timer.periodic(_pollInterval, (_) => _syncNow());
+  }
+
+  void _syncNow() {
+    if (mounted && context.read<AppState>().isLoggedIn) {
+      final app = context.read<AppState>();
+      app.fetchMe();
+      app.fetchOrders(isSilent: true);
+      app.fetchTopUps(isSilent: true);
+      app.fetchServiceStatus();
+      app.fetchNotifications();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Back in front: refresh immediately, then resume periodic sync.
+      _syncNow();
+      _startPolling();
+      _checkForUpdate();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      // App in background / screen off: stop polling entirely.
+      _statusTimer?.cancel();
+      _statusTimer = null;
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusTimer?.cancel();
     super.dispose();
   }

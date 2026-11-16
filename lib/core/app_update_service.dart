@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api_service.dart';
+import 'remote_config.dart';
 import 'constants.dart';
 import 'sound_service.dart';
 
@@ -23,9 +24,15 @@ class AppUpdateService {
     _isChecking = true;
 
     try {
-      final res = await CustomerApiService.instance.getSettings();
-      final data = res['data'] ?? res;
-      final appVerData = data['appVersion']?['customer'] as Map? ?? {};
+      // Prefer the remote config (works even when the backend is down),
+      // fall back to the backend's system settings.
+      await RemoteConfig.refresh();
+      Map appVerData = RemoteConfig.appVersion('customer');
+      if (appVerData.isEmpty) {
+        final res = await CustomerApiService.instance.getSettings();
+        final data = res['data'] ?? res;
+        appVerData = data['appVersion']?['customer'] as Map? ?? {};
+      }
 
       if (appVerData.isEmpty) {
         if (isManualCheck && context.mounted) {

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
 import '../../core/app_state.dart';
@@ -25,8 +26,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   Timer? _progressTimer;
+  final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+
+  String _kycLabel(String status, bool isBn) {
+    switch (status.toUpperCase()) {
+      case 'VERIFIED':
+        return isBn ? 'ভেরিফাইড' : 'Verified';
+      case 'PENDING':
+      case 'UNDER_REVIEW':
+        return isBn ? 'যাচাই চলছে' : 'Under review';
+      case 'REJECTED':
+        return isBn ? 'বাতিল হয়েছে' : 'Rejected';
+      default:
+        return isBn ? 'সম্পন্ন হয়নি' : 'Not submitted';
+    }
+  }
 
   Future<void> _handlePickProfileImage(BuildContext context) async {
+    final isBn = context.read<AppState>().isBn;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked == null) return;
@@ -88,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: isBn)),
           backgroundColor: AppColors.error,
         ),
       );
@@ -185,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           setDialogState(() => isLoading = false);
                           SoundService.playError();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppColors.error),
+                            SnackBar(content: Text(friendlyError(e, isBn: app.isBn)), backgroundColor: AppColors.error),
                           );
                         }
                       },
@@ -216,6 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final app = ctx.watch<AppState>();
 
           return AlertDialog(
+            scrollable: true,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
@@ -307,8 +325,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.pop(ctx);
                           SoundService.playSuccess();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('PIN changed successfully!'),
+                            SnackBar(
+                              content: Text(app.isBn ? 'পিন সফলভাবে পরিবর্তন হয়েছে!' : 'PIN changed successfully!'),
                               backgroundColor: AppColors.success,
                             ),
                           );
@@ -317,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SoundService.playError();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(e.toString().replaceAll('Exception: ', '')),
+                              content: Text(friendlyError(e, isBn: app.isBn)),
                               backgroundColor: AppColors.error,
                             ),
                           );
@@ -474,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: app.isBn)),
           backgroundColor: AppColors.error,
         ),
       );
@@ -629,9 +647,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        app.userName.isNotEmpty ? app.userName : 'Customer Name',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      Flexible(
+                        child: Text(
+                          app.userName.isNotEmpty ? app.userName : (app.isBn ? 'আপনার নাম যোগ করুন' : 'Add your name'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
                       ),
                       const SizedBox(width: 6),
                       InkWell(
@@ -700,7 +723,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          app.kycStatus == 'VERIFIED' ? Icons.verified : Icons.hourglass_top,
+                          app.kycStatus == 'VERIFIED'
+                              ? Icons.verified
+                              : (app.kycStatus == 'PENDING' ? Icons.hourglass_top : Icons.error_outline),
                           size: 16,
                           color: app.kycStatus == 'VERIFIED'
                               ? AppColors.success
@@ -708,7 +733,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'KYC Status: ${app.kycStatus}',
+                          '${app.isBn ? 'কেওয়াইসি' : 'KYC'}: ${_kycLabel(app.kycStatus, app.isBn)}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -851,9 +876,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 24),
 
             // App Version
-            Text(
-              'Drive Offer Customer App v1.0.0 (Build 1)',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            FutureBuilder<PackageInfo>(
+              future: _packageInfo,
+              builder: (context, snap) {
+                final info = snap.data;
+                return Text(
+                  info == null
+                      ? AppConstants.appName
+                      : '${AppConstants.appName} v${info.version} (${info.buildNumber})',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                );
+              },
             ),
             const SizedBox(height: 40),
           ],

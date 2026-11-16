@@ -119,7 +119,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() => _isLoading = false);
       SoundService.playError();
       
-      String errorMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+      String errorMsg = friendlyError(e, isBn: context.read<AppState>().isBn);
       if (e is ApiException) {
         if (e.code == 'AUTH_OTP_INVALID' || errorMsg.contains('Incorrect') || errorMsg.contains('invalid')) {
           errorMsg = 'ভুল ওটিপি কোড! অনুগ্রহ করে সঠিক ৬-ডিজিটের কোড লিখুন।';
@@ -165,7 +165,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '')),
+          content: Text(friendlyError(e, isBn: context.read<AppState>().isBn)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),

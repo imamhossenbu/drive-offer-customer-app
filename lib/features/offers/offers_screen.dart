@@ -149,6 +149,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                     prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
+                            tooltip: app.isBn ? 'মুছুন' : 'Clear',
                             icon: const Icon(Icons.clear, size: 18),
                             onPressed: () {
                               _searchController.clear();
@@ -323,6 +324,34 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
       }
       return true;
     }).toList();
+
+    if (filtered.isEmpty && app.offersError != null) {
+      return RefreshIndicator(
+        onRefresh: () => app.refreshAll(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          children: [
+            const SizedBox(height: 80),
+            Icon(Icons.wifi_off_rounded, size: 60, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            Text(
+              app.offersError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () => app.refreshAll(),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(app.isBn ? 'আবার চেষ্টা করুন' : 'Try Again'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (filtered.isEmpty) {
       return RefreshIndicator(

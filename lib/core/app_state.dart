@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'api_service.dart';
 import 'auth_storage.dart';
 import 'sound_service.dart';
+import 'money.dart';
 
 // ── Typed Models ─────────────────────────────────────────────────────────────
 
@@ -33,12 +34,11 @@ class DriveOffer {
   });
 
   factory DriveOffer.fromJson(Map<String, dynamic> json) {
-    final regPriceNum = (json['regularPrice'] ?? json['price'] ?? json['originalPrice'] ?? 0) as num;
-    final sellPriceNum = (json['sellingPrice'] ?? json['discountPrice'] ?? regPriceNum) as num;
-
-    // Prices >= 10000 are in poisha (100 poisha = 1 BDT, e.g. 500 BDT = 50000 poisha)
-    final regPrice = regPriceNum >= 10000 ? regPriceNum / 100 : regPriceNum.toDouble();
-    final sellPrice = sellPriceNum >= 10000 ? sellPriceNum / 100 : sellPriceNum.toDouble();
+    // API returns prices in poisha (100 poisha = 1 BDT).
+    final regPrice = poishaToBdt(json['regularPrice'] ?? json['price'] ?? json['originalPrice']);
+    final sellPrice = json['sellingPrice'] != null || json['discountPrice'] != null
+        ? poishaToBdt(json['sellingPrice'] ?? json['discountPrice'])
+        : regPrice;
 
     final opRaw = json['operator'] ?? json['operatorId'];
     final op = (opRaw is Map
@@ -82,8 +82,7 @@ class OrderModel {
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
-    final priceNum = (json['price'] ?? json['amount'] ?? 0) as num;
-    final price = priceNum > 1000 ? priceNum / 100 : priceNum.toDouble();
+    final price = poishaToBdt(json['price'] ?? json['amount']);
 
     final offer = json['offer'] is Map ? json['offer'] : {};
     final title = json['offerTitle'] ?? offer['title'] ?? offer['name'] ?? 'Data Pack';
@@ -123,11 +122,8 @@ class TransactionModel {
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    final amtNum = (json['amount'] ?? 0) as num;
-    final amt = amtNum > 1000 ? amtNum / 100 : amtNum.toDouble();
-
-    final balNum = (json['balanceAfter'] ?? 0) as num;
-    final bal = balNum > 1000 ? balNum / 100 : balNum.toDouble();
+    final amt = poishaToBdt(json['amount']);
+    final bal = poishaToBdt(json['balanceAfter']);
 
     final desc = json['description']?.toString() ?? json['note']?.toString() ?? '';
     String? phone = json['recipientPhone']?.toString();
@@ -187,10 +183,9 @@ class TopUpItem {
 
   factory TopUpItem.fromJson(Map<String, dynamic> json) {
     final amtBdt = json['amountBdt'];
-    final amtNum = (json['amount'] ?? 0) as num;
     final double amt = amtBdt != null
         ? (amtBdt as num).toDouble()
-        : (amtNum > 1000 ? amtNum / 100.0 : amtNum.toDouble());
+        : poishaToBdt(json['amount']);
 
     final prov = (json['paymentProvider'] ?? json['provider'] ?? 'BKASH').toString().toUpperCase();
     final txId = (json['customerTransactionId'] ?? json['transactionId'] ?? '').toString().trim();
@@ -277,6 +272,11 @@ class AppState extends ChangeNotifier {
   bool _isLoadingTransactions = false;
   bool _isLoadingTopUps = false;
 
+  // Last load failure (null when the last fetch succeeded), so screens can show
+  // a retry state instead of a fake "no offers / no orders" empty state.
+  String? _offersError;
+  String? _ordersError;
+
   // ── Getters ──────────────────────────────────────────────────────────────
   bool get isLoggedIn => _isLoggedIn;
   Map<String, dynamic> get user => _user;
@@ -320,6 +320,8 @@ class AppState extends ChangeNotifier {
   bool get isLoadingOrders => _isLoadingOrders;
   bool get isLoadingTransactions => _isLoadingTransactions;
   bool get isLoadingTopUps => _isLoadingTopUps;
+  String? get offersError => _offersError;
+  String? get ordersError => _ordersError;
 
   int get unreadNotificationsCount => _notifications.where((n) => !n.isRead).length;
   int get pendingOrdersCount => _orders.where((o) => o.status == 'PENDING' || o.status == 'PROCESSING').length;
@@ -392,12 +394,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Single money formatter for the whole app: `50` -> "৳৫০", `49.5` -> "৳৪৯.৫০"
+  /// (Bangla numerals in bn mode). Whole amounts drop the ".00".
   String formatCurrency(num amount) {
-    final formatted = NumberFormat('#,##,##0.00', 'en_US').format(amount);
+    final rounded = (amount * 100).round() / 100;
+    final isWhole = rounded == rounded.truncateToDouble();
+    final formatted = NumberFormat(isWhole ? '#,##,##0' : '#,##,##0.00', 'en_US').format(rounded);
     if (_lang == 'bn') {
-      return '৳ ${toBengaliNumerals(formatted)}';
+      return '৳${toBengaliNumerals(formatted)}';
     }
-    return '৳ $formatted';
+    return '৳$formatted';
   }
 
   String formatNumber(dynamic value) {
@@ -507,7 +513,12 @@ class AppState extends ChangeNotifier {
       if (opList.isNotEmpty) {
         _rawOperators = opList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
-    } catch (_) {}
+      _offersError = null;
+    } catch (_) {
+      _offersError = isBn
+          ? 'অফার লোড করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+          : 'Could not load offers. Check your connection and try again.';
+    }
 
     _isLoadingOffers = false;
     notifyListeners();
@@ -523,7 +534,12 @@ class AppState extends ChangeNotifier {
       final data = res['data'];
       final List list = (data is List ? data : (data?['orders'] is List ? data['orders'] : (data?['docs'] is List ? data['docs'] : [])));
       _orders = list.map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
-    } catch (_) {}
+      _ordersError = null;
+    } catch (_) {
+      _ordersError = isBn
+          ? 'অর্ডার লোড করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+          : 'Could not load orders. Check your connection and try again.';
+    }
     if (!isSilent) _isLoadingOrders = false;
     notifyListeners();
   }

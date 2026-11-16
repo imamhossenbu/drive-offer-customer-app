@@ -94,7 +94,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: $e'),
+            content: Text(context.read<AppState>().isBn
+                ? 'ছবি নির্বাচন করা যায়নি। আবার চেষ্টা করুন।'
+                : 'Could not pick the image. Please try again.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -330,7 +332,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: context.read<AppState>().isBn)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),

@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../constants.dart';
 import 'operator_badge.dart';
 import '../../features/offers/offer_detail_sheet.dart';
+import '../money.dart';
 
 class OfferCard extends StatelessWidget {
   final DriveOffer? driveOffer;
@@ -48,11 +49,9 @@ class OfferCard extends StatelessWidget {
               : (map['operator'] ?? map['operatorName'] ?? 'GP'))
           .toString();
 
-      final regPricePoisha = (map['regularPrice'] ?? map['originalPrice'] ?? map['price'] ?? 0) as num;
-      final sellPricePoisha = (map['sellingPrice'] ?? map['discountPrice'] ?? map['price'] ?? 0) as num;
-
-      regPrice = regPricePoisha > 1000 ? regPricePoisha / 100 : regPricePoisha.toDouble();
-      sellPrice = sellPricePoisha > 1000 ? sellPricePoisha / 100 : sellPricePoisha.toDouble();
+      // API returns prices in poisha (100 poisha = 1 BDT).
+      regPrice = poishaToBdt(map['regularPrice'] ?? map['originalPrice'] ?? map['price']);
+      sellPrice = poishaToBdt(map['sellingPrice'] ?? map['discountPrice'] ?? map['price']);
       discount = (regPrice > sellPrice) ? (regPrice - sellPrice) : ((map['cashback'] ?? map['commission'] ?? 0) as num).toDouble();
 
       validity = (map['validity'] ?? '30 Days').toString();

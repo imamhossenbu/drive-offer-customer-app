@@ -73,30 +73,37 @@ class HomeScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 4,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(2),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              app.isBn ? 'জনপ্রিয় ড্রাইভ অফারসমূহ' : 'Trending Drive Offers',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  app.isBn ? 'জনপ্রিয় ড্রাইভ অফারসমূহ' : 'Trending Drive Offers',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         TextButton(
                           onPressed: () => onNavigateTab(1),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 app.isBn ? 'সব দেখুন' : 'See All',
@@ -144,13 +151,16 @@ class HomeScreen extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 36, 16, 0),
+          // Real status-bar inset instead of a fixed 36, so the avatar never sits
+          // under the status icons on punch-hole / tall status-bar phones.
+          padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 8, 16, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // User Info
-              Row(
+              Expanded(
+                child: Row(
                 children: [
                   CircleAvatar(
                     radius: 20,
@@ -161,23 +171,27 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        app.isBn ? 'স্বাগতম!' : 'Welcome,',
-                        style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
-                      ),
-                      Text(
-                        app.userName.isNotEmpty ? app.userName : 'Customer',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          app.isBn ? 'স্বাগতম!' : 'Welcome,',
+                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                        ),
+                        Text(
+                          app.userName.isNotEmpty ? app.userName : (app.isBn ? 'গ্রাহক' : 'Customer'),
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                 ],
+              ),
               ),
 
               // Actions (Language switcher + Notifications)
@@ -213,6 +227,7 @@ class HomeScreen extends StatelessWidget {
 
                   // Notification Bell
                   IconButton(
+                    tooltip: app.isBn ? 'নোটিফিকেশন' : 'Notifications',
                     icon: Stack(
                       children: [
                         const Icon(Icons.notifications_outlined, color: Colors.white, size: 26),
@@ -238,7 +253,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                     onPressed: () {
                       SoundService.playTap();
-                      _showNotificationsSheet(context, app);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                      );
                     },
                   ),
                 ],
@@ -364,15 +382,17 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              app.isBn ? 'নামাজের বিরতি চলছে' : 'Prayer Break in Progress',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Expanded(
+                              child: Text(
+                                app.isBn ? 'নামাজের বিরতি চলছে' : 'Prayer Break in Progress',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -440,15 +460,17 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              app.isBn ? 'রাতের বিশ্রাম বিরতি' : 'Night Rest Break',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Expanded(
+                              child: Text(
+                                app.isBn ? 'রাতের বিশ্রাম বিরতি' : 'Night Rest Break',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -516,15 +538,17 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              app.isBn ? 'অফার গ্রহণ সাময়িক বন্ধ' : 'Offers Temporarily Closed',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                            Expanded(
+                              child: Text(
+                                app.isBn ? 'অফার গ্রহণ সাময়িক বন্ধ' : 'Offers Temporarily Closed',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -664,13 +688,23 @@ class HomeScreen extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                app.isBn ? 'অপারেটর নির্বাচন করুন' : 'Select Operator',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              Flexible(
+                child: Text(
+                  app.isBn ? 'অপারেটর নির্বাচন করুন' : 'Select Operator',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
               ),
-              Text(
-                app.isBn ? 'ফিল্টার করতে ট্যাপ করুন' : 'Tap to filter offers',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  app.isBn ? 'ফিল্টার করতে ট্যাপ করুন' : 'Tap to filter offers',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
               ),
             ],
           ),
@@ -842,7 +876,7 @@ class HomeScreen extends StatelessWidget {
                       item['title'] as String,
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -1062,6 +1096,36 @@ class HomeScreen extends StatelessWidget {
       return true;
     }).toList();
 
+    if (filtered.isEmpty && app.offersError != null) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 8),
+            Text(
+              app.offersError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => app.refreshAll(),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(app.isBn ? 'আবার চেষ্টা করুন' : 'Try Again'),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (filtered.isEmpty) {
       return Container(
         margin: const EdgeInsets.all(16),
@@ -1102,131 +1166,6 @@ class HomeScreen extends StatelessWidget {
               builder: (_) => OfferDetailSheet(offer: offer),
             );
           },
-        );
-      },
-    );
-  }
-
-  void _showNotificationsSheet(BuildContext context, AppState app) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.notifications_active, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          app.isBn ? 'নোটিফিকেশন সমুহ' : 'Notifications',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: app.notifications.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_none, size: 56, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            Text(
-                              app.isBn ? 'কোন নোটিফিকেশন নেই' : 'No notifications yet',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: app.notifications.length,
-                        itemBuilder: (ctx, index) {
-                          final notif = app.notifications[index];
-                          final isUnread = !notif.isRead;
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isUnread ? const Color(0xFFF0FDF4) : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isUnread ? AppColors.primary.withOpacity(0.4) : Colors.grey.shade200,
-                              ),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2)),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        notif.title,
-                                        style: TextStyle(
-                                          fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                                          fontSize: 14,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isUnread)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.secondary,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: const Text('New', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  notif.message,
-                                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
         );
       },
     );

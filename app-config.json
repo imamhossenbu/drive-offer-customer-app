@@ -1,0 +1,17 @@
+{
+  "apiBaseUrl": "https://alokito-telecom-backend-sqgt.onrender.com/api/v1",
+  "customer": {
+    "latestVersion": "1.0.9",
+    "buildNumber": 10,
+    "downloadUrl": "https://alokito-telecom-backend-sqgt.onrender.com/download/customer",
+    "forceUpdate": false,
+    "releaseNotes": "নতুন ফিচার ও পারফরম্যান্স আপডেট।"
+  },
+  "admin": {
+    "latestVersion": "1.0.9",
+    "buildNumber": 10,
+    "downloadUrl": "https://alokito-telecom-backend-sqgt.onrender.com/download/admin",
+    "forceUpdate": false,
+    "releaseNotes": "নতুন ফিচার ও পারফরম্যান্স আপডেট।"
+  }
+}

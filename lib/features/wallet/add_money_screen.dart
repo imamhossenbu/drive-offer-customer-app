@@ -30,7 +30,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   final Map<String, Map<String, dynamic>> _gateways = {
     'BKASH': {
       'name': 'bKash (বিকাশ)',
-      'color': const Color(0xFFE2136E),
+      'color': AppColors.bkash,
       'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
@@ -38,7 +38,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     },
     'NAGAD': {
       'name': 'Nagad (নগদ)',
-      'color': const Color(0xFFF7941D),
+      'color': AppColors.nagad,
       'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
@@ -46,7 +46,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     },
     'ROCKET': {
       'name': 'Rocket (রকেট)',
-      'color': const Color(0xFF8C3494),
+      'color': AppColors.rocket,
       'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
@@ -54,7 +54,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     },
     'UPAY': {
       'name': 'Upay (উপায়)',
-      'color': const Color(0xFF0047BA),
+      'color': AppColors.upay,
       'number': '',
       'type': 'Send Money (Personal)',
       'fee': '0%',
@@ -71,9 +71,14 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       }
     });
     _loadDynamicPaymentGateways();
-    // Real-time polling: auto-check every 3 seconds so changes from listener app reflect immediately
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (mounted) {
+    // Real-time polling so changes from the listener app reflect quickly.
+    // This screen lives inside CustomerMain's IndexedStack, so it stays mounted on
+    // every tab; only poll while its tab is actually visible and the app is in the
+    // foreground, otherwise this alone was ~80 requests/minute per open app.
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      final inForeground =
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+      if (mounted && inForeground && Visibility.of(context)) {
         _loadDynamicPaymentGateways(isSilent: true);
         context.read<AppState>().fetchTopUps();
         context.read<AppState>().fetchMe();
@@ -192,6 +197,16 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
     super.dispose();
   }
 
+  /// Bangla wording for the gateway account type shown in the instructions
+  /// ("Send Money (Personal)" etc. come from the backend in English).
+  String _typeLabelBn(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('personal') || t.contains('send')) return 'সেন্ড মানি';
+    if (t.contains('merchant') || t.contains('payment')) return 'পেমেন্ট';
+    if (t.contains('agent')) return 'ক্যাশ আউট';
+    return type;
+  }
+
   void _copyToClipboard(String text) {
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -264,7 +279,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: context.read<AppState>().isBn)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -273,6 +288,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   }
 
   void _showTopUpSuccessDialog(double amount, {bool isImmediatelyVerified = false}) {
+    final app = context.read<AppState>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -301,8 +317,8 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
             const SizedBox(height: 8),
             Text(
               isImmediatelyVerified
-                  ? '৳${amount.toStringAsFixed(0)} আপনার মূল ওয়ালেটে সফলভাবে যোগ করা হয়েছে।'
-                  : '৳${amount.toStringAsFixed(0)} টাকার রিকোয়েস্টটি দ্রুত ভেরিফাই হচ্ছে। এসএমএস পাওয়া মাত্র স্বয়ংক্রিয়ভাবে ব্যালেন্স যোগ হবে।',
+                  ? '${app.formatCurrency(amount)} আপনার মূল ওয়ালেটে সফলভাবে যোগ করা হয়েছে।'
+                  : '${app.formatCurrency(amount)} টাকার রিকোয়েস্টটি দ্রুত ভেরিফাই হচ্ছে। এসএমএস পাওয়া মাত্র স্বয়ংক্রিয়ভাবে ব্যালেন্স যোগ হবে।',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
             ),
@@ -328,7 +344,19 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final currentGateway = _gateways[_selectedProvider]!;
+    // Hide gateways the admin switched off ('active' == false); fall back to all
+    // of them if none are reported active so the screen is never empty.
+    final activeGateways = _gateways.entries.where((e) => e.value['active'] != false).toList();
+    final shownGateways = activeGateways.isEmpty ? _gateways.entries.toList() : activeGateways;
+    final selectedKey = shownGateways.any((e) => e.key == _selectedProvider)
+        ? _selectedProvider
+        : shownGateways.first.key;
+    if (selectedKey != _selectedProvider) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedProvider = selectedKey);
+      });
+    }
+    final currentGateway = _gateways[selectedKey]!;
 
     final quickAmounts = [100, 200, 500, 1000, 2000];
 
@@ -409,7 +437,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '৳${app.walletBalance.toStringAsFixed(2)}',
+                          app.formatCurrency(app.walletBalance),
                           style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -434,10 +462,10 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
               ),
               const SizedBox(height: 12),
               Row(
-                children: _gateways.entries.map((entry) {
+                children: shownGateways.map((entry) {
                   final key = entry.key;
                   final gw = entry.value;
-                  final isSelected = _selectedProvider == key;
+                  final isSelected = selectedKey == key;
 
                   return Expanded(
                     child: InkWell(
@@ -481,7 +509,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              key,
+                              (gw['name'] as String).split(' (').first,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -525,7 +553,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                     const SizedBox(height: 10),
                     Text(
                       app.isBn
-                          ? 'আপনার ${currentGateway['name']} অ্যাপ থেকে নিচে দেওয়া নম্বরে ${currentGateway['type']} করুন।'
+                          ? 'আপনার ${currentGateway['name']} অ্যাপ থেকে নিচে দেওয়া নম্বরে ${_typeLabelBn(currentGateway['type'] as String)} করুন।'
                           : 'Send Money to the number below from your ${currentGateway['name']} account.',
                       style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
@@ -547,7 +575,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${currentGateway['name']} Number',
+                                  app.isBn ? '${currentGateway['name']} নম্বর' : '${currentGateway['name']} Number',
                                   style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                                 ),
                                 Text(
@@ -597,13 +625,13 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                 controller: _amountController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Amount (টাকার পরিমাণ ৳)',
-                  prefixIcon: Icon(Icons.payments_outlined, color: AppColors.primary),
-                  hintText: 'e.g. 500',
+                decoration: InputDecoration(
+                  labelText: app.isBn ? 'টাকার পরিমাণ (৳)' : 'Amount (৳)',
+                  prefixIcon: const Icon(Icons.payments_outlined, color: AppColors.primary),
+                  hintText: app.isBn ? 'যেমন: ৫০০' : 'e.g. 500',
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'টাকার পরিমাণ লিখুন';
+                  if (v == null || v.trim().isEmpty) return app.isBn ? 'টাকার পরিমাণ লিখুন' : 'Enter an amount';
                   final val = double.tryParse(v) ?? 0;
                   if (val < 20) return app.isBn ? 'সর্বনিম্ন ব্যালেন্স যোগ ২০ টাকা' : 'Minimum amount is ৳20';
                   return null;
@@ -616,7 +644,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                 spacing: 8,
                 children: quickAmounts.map((amt) {
                   return ActionChip(
-                    label: Text('৳$amt'),
+                    label: Text(app.formatCurrency(amt)),
                     backgroundColor: Colors.white,
                     side: BorderSide(color: Colors.grey.shade300),
                     labelStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 12),
@@ -636,9 +664,9 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                 controller: _trxIdController,
                 textCapitalization: TextCapitalization.characters,
                 decoration: InputDecoration(
-                  labelText: 'Transaction ID (TrxID)',
+                  labelText: app.isBn ? 'ট্রানজেকশন আইডি (TrxID)' : 'Transaction ID (TrxID)',
                   prefixIcon: const Icon(Icons.receipt_long_outlined, color: AppColors.primary),
-                  hintText: 'e.g. 9J83KA9281',
+                  hintText: app.isBn ? 'যেমন: 9J83KA9281' : 'e.g. 9J83KA9281',
                   helperText: app.isBn ? 'এসএমএস থেকে TrxID কপি করে এখানে পেস্ট করুন' : 'Paste the TrxID received in SMS',
                 ),
                 validator: (v) {
@@ -765,16 +793,16 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                   Color provColor = AppColors.primary;
                   String provAsset = 'assets/payments/bkash.png';
                   if (topUp.provider == 'BKASH') {
-                    provColor = const Color(0xFFE2136E);
+                    provColor = AppColors.bkash;
                     provAsset = 'assets/payments/bkash.png';
                   } else if (topUp.provider == 'NAGAD') {
-                    provColor = const Color(0xFFF7941D);
+                    provColor = AppColors.nagad;
                     provAsset = 'assets/payments/nagad.png';
                   } else if (topUp.provider == 'ROCKET') {
-                    provColor = const Color(0xFF8C3494);
+                    provColor = AppColors.rocket;
                     provAsset = 'assets/payments/rocket.png';
                   } else if (topUp.provider == 'UPAY') {
-                    provColor = const Color(0xFF0047BA);
+                    provColor = AppColors.upay;
                     provAsset = 'assets/payments/upay.png';
                   }
 
@@ -785,14 +813,14 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                   final statusColor = isVerified
                       ? AppColors.success
                       : (isVerifying
-                          ? const Color(0xFFD97706)
-                          : (isPending ? const Color(0xFF2563EB) : AppColors.error));
+                          ? AppColors.info
+                          : (isPending ? AppColors.warning : AppColors.error));
 
                   final statusBg = isVerified
                       ? const Color(0xFFDCFCE7)
                       : (isVerifying
-                          ? const Color(0xFFFEF3C7)
-                          : (isPending ? const Color(0xFFDBEAFE) : const Color(0xFFFEE2E2)));
+                          ? AppColors.infoBg
+                          : (isPending ? AppColors.warningBg : AppColors.dangerBg));
 
                   final statusLabel = isVerified
                       ? (app.isBn ? 'সফল (যুক্ত হয়েছে)' : 'Verified')
@@ -859,7 +887,10 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
                                         Text(
                                           topUp.provider,
@@ -869,7 +900,6 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                                             color: provColor,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
@@ -914,7 +944,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                                 ),
                               ),
                               Text(
-                                '+৳${topUp.amount.toStringAsFixed(0)}',
+                                '+${app.formatCurrency(topUp.amount)}',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,

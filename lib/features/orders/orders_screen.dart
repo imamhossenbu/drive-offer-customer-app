@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
 import '../../core/constants.dart';
@@ -108,7 +107,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: RefreshIndicator(
               onRefresh: () => app.fetchOrders(),
               color: AppColors.primary,
-              child: filtered.isEmpty
+              child: app.isLoadingOrders && app.orders.isEmpty
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : filtered.isEmpty
                   ? ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
@@ -116,12 +117,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Center(
                           child: Column(
                             children: [
-                              Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 12),
-                              Text(
-                                app.isBn ? 'কোন অর্ডার পাওয়া যায়নি' : 'No orders found',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                              Icon(
+                                app.ordersError != null ? Icons.wifi_off_rounded : Icons.shopping_bag_outlined,
+                                size: 64,
+                                color: Colors.grey.shade400,
                               ),
+                              const SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: Text(
+                                  app.ordersError ?? (app.isBn ? 'কোন অর্ডার পাওয়া যায়নি' : 'No orders found'),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                                ),
+                              ),
+                              if (app.ordersError != null) ...[
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () => app.fetchOrders(),
+                                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                                  label: Text(app.isBn ? 'আবার চেষ্টা করুন' : 'Try Again'),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -146,13 +163,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             statusBg = const Color(0xFFDBEAFE);
                             break;
                           case 'PENDING':
-                            statusColor = const Color(0xFFD97706);
-                            statusBg = const Color(0xFFFEF3C7);
+                            statusColor = AppColors.warning;
+                            statusBg = AppColors.warningBg;
                             break;
                           default:
                             statusColor = AppColors.error;
                             statusBg = const Color(0xFFFEE2E2);
                         }
+                        final statusLabel = statuses.firstWhere(
+                          (s) => s['id'] == order.status.toUpperCase(),
+                          orElse: () => {'name': order.status},
+                        )['name']!;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 14),
@@ -184,7 +205,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            order.offerTitle.isNotEmpty ? order.offerTitle : '${order.operator} Offer',
+                                            order.offerTitle.isNotEmpty ? order.offerTitle : (app.isBn ? '${order.operator} অফার' : '${order.operator} Offer'),
                                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                           ),
                                           const SizedBox(height: 2),
@@ -202,7 +223,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
-                                        order.status,
+                                        statusLabel,
                                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
                                       ),
                                     ),
@@ -230,7 +251,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       ),
                                     ),
                                     Text(
-                                      '৳${order.price.toStringAsFixed(0)}',
+                                      app.formatCurrency(order.price),
                                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
                                     ),
                                   ],
@@ -245,15 +266,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontFamily: 'monospace'),
                                     ),
                                     if (order.status.toUpperCase() == 'PENDING' || order.status.toUpperCase() == 'PROCESSING')
-                                      const Row(
+                                      Row(
                                         children: [
-                                          SizedBox(
+                                          const SizedBox(
                                             width: 10,
                                             height: 10,
-                                            child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFD97706)),
+                                            child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.warning),
                                           ),
-                                          SizedBox(width: 6),
-                                          Text('In Progress', style: TextStyle(fontSize: 11, color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            app.isBn ? 'প্রক্রিয়াধীন' : 'In Progress',
+                                            style: const TextStyle(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.bold),
+                                          ),
                                         ],
                                       ),
                                   ],

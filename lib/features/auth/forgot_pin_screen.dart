@@ -74,7 +74,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: context.read<AppState>().isBn)),
           backgroundColor: AppColors.error,
         ),
       );
@@ -116,7 +116,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: context.read<AppState>().isBn)),
           backgroundColor: AppColors.error,
         ),
       );
@@ -172,7 +172,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: context.read<AppState>().isBn)),
           backgroundColor: AppColors.error,
         ),
       );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
+import '../../core/app_update_service.dart';
 import '../../core/app_state.dart';
 import '../../core/constants.dart';
 import '../customer_main.dart';
@@ -19,6 +20,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pinCtrl = TextEditingController();
   bool _hidePin = true;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Logged-out users must also see the "new update" screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppUpdateService.instance.checkForUpdate(context);
+    });
+  }
   String? _error;
 
   @override
@@ -242,13 +252,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     isBn ? 'সিকিউরিটি পিন (PIN)' : 'Security PIN',
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textBody),
                   ),
-                  InkWell(
-                    onTap: () {
+                  TextButton(
+                    onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const ForgotPinScreen()),
                       );
                     },
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
                     child: Text(
                       isBn ? 'পিন ভুলে গেছেন?' : 'Forgot PIN?',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
@@ -268,6 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintStyle: const TextStyle(fontSize: 13, color: AppColors.textLight),
                   prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20, color: AppColors.textMuted),
                   suffixIcon: IconButton(
+                    tooltip: _hidePin ? (isBn ? 'পিন দেখুন' : 'Show PIN') : (isBn ? 'পিন লুকান' : 'Hide PIN'),
                     icon: Icon(_hidePin ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: AppColors.textMuted),
                     onPressed: () => setState(() => _hidePin = !_hidePin),
                   ),
@@ -323,13 +338,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       isBn ? 'নতুন গ্রাহক? ' : "Don't have an account? ",
                       style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
                     ),
-                    InkWell(
-                      onTap: () {
+                    TextButton(
+                      onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const RegistrationScreen()),
                         );
                       },
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
                       child: Text(
                         isBn ? 'অ্যাকাউন্ট তৈরি করুন' : 'Create Account',
                         style: const TextStyle(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/auth_storage.dart';
+import 'core/remote_config.dart';
 import 'core/app_state.dart';
 import 'core/constants.dart';
 import 'features/auth/login_screen.dart';
@@ -11,6 +12,7 @@ import 'features/customer_main.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthStorage.init();
+  await RemoteConfig.init();
   runApp(const CustomerApp());
 }
 

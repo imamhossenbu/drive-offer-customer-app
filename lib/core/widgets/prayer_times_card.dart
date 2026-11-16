@@ -16,6 +16,7 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
   String _selectedDistrict = 'Dhaka';
   String _selectedDistrictBn = 'ঢাকা';
   bool _loading = true;
+  bool _error = false;
   Map<String, dynamic>? _prayerData;
   Timer? _countdownTimer;
   int _countdownSeconds = 0;
@@ -99,59 +100,34 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
     setState(() => _loading = true);
     try {
       final res = await CustomerApiService.instance.getPrayerTimes(district: _selectedDistrict);
+      if (!mounted) return;
       if (res['data'] != null) {
-        if (mounted) {
-          setState(() {
-            _prayerData = res['data'];
-            _countdownSeconds = _prayerData?['countdownSeconds'] ?? 0;
-            _selectedDistrict = _prayerData?['district'] ?? _selectedDistrict;
-            _selectedDistrictBn = _prayerData?['districtBn'] ?? _selectedDistrictBn;
-            _loading = false;
-          });
-          _startCountdown();
-        }
-      }
-    } catch (_) {
-      // Fallback offline calculation
-      if (mounted) {
         setState(() {
-          _prayerData = _getOfflineData();
-          _countdownSeconds = 3600;
+          _prayerData = res['data'];
+          _countdownSeconds = _prayerData?['countdownSeconds'] ?? 0;
+          _selectedDistrict = _prayerData?['district'] ?? _selectedDistrict;
+          _selectedDistrictBn = _prayerData?['districtBn'] ?? _selectedDistrictBn;
           _loading = false;
+          _error = false;
         });
         _startCountdown();
+      } else {
+        _showLoadError();
       }
+    } catch (_) {
+      if (mounted) _showLoadError();
     }
   }
 
-  Map<String, dynamic> _getOfflineData() {
-    return {
-      'district': _selectedDistrict,
-      'districtBn': _selectedDistrictBn,
-      'currentPrayer': 'Dhuhr',
-      'currentPrayerBn': 'যোহর',
-      'nextPrayer': 'Asr',
-      'nextPrayerBn': 'আসর',
-      'nextPrayerTime': '04:18 PM',
-      'timings': {
-        'fajr': '04:38 AM',
-        'fajrBn': '০৪:৩৮',
-        'sunrise': '05:51 AM',
-        'sunriseBn': '০৫:৫১',
-        'dhuhr': '11:54 AM',
-        'dhuhrBn': '১১:৫৪',
-        'asr': '04:18 PM',
-        'asrBn': '০৪:১৮',
-        'maghrib': '05:56 PM',
-        'maghribBn': '০৫:৫৬',
-        'isha': '07:09 PM',
-        'ishaBn': '০৭:০৯',
-        'sehriEnd': '04:32 AM',
-        'sehriEndBn': '০৪:৩২',
-        'iftar': '05:56 PM',
-        'iftarBn': '০৫:৫৬',
-      }
-    };
+  /// Never show invented prayer times: on failure show an error card with retry
+  /// (instead of hardcoded Dhaka timings and a fake 1-hour countdown).
+  void _showLoadError() {
+    _countdownTimer?.cancel();
+    setState(() {
+      _prayerData = null;
+      _loading = false;
+      _error = true;
+    });
   }
 
   void _startCountdown() {
@@ -270,6 +246,38 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (_error && _prayerData == null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF06351E),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.mosque, color: Color(0xFFF59E0B), size: 32),
+            const SizedBox(height: 8),
+            Text(
+              widget.isBn ? 'নামাজের সময়সূচি লোড করা যায়নি' : 'Could not load prayer times',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _fetchPrayerTimes,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white54),
+              ),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(widget.isBn ? 'আবার চেষ্টা করুন' : 'Try Again'),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_loading && _prayerData == null) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -285,16 +293,16 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
     }
 
     final timings = _prayerData?['timings'] ?? {};
-    final nextPrayer = widget.isBn ? (_prayerData?['nextPrayerBn'] ?? 'আসর') : (_prayerData?['nextPrayer'] ?? 'Asr');
-    final nextPrayerTime = _prayerData?['nextPrayerTime'] ?? '04:18 PM';
-    final currentPrayer = widget.isBn ? (_prayerData?['currentPrayerBn'] ?? 'যোহর') : (_prayerData?['currentPrayer'] ?? 'Dhuhr');
+    final nextPrayer = widget.isBn ? (_prayerData?['nextPrayerBn'] ?? '--') : (_prayerData?['nextPrayer'] ?? '--');
+    final nextPrayerTime = _prayerData?['nextPrayerTime'] ?? '--';
+    final currentPrayer = widget.isBn ? (_prayerData?['currentPrayerBn'] ?? '') : (_prayerData?['currentPrayer'] ?? '');
 
     final List<Map<String, dynamic>> waqts = [
-      {'name': widget.isBn ? 'ফজর' : 'Fajr', 'time': timings['fajr'] ?? '04:38 AM', 'icon': Icons.nights_stay_outlined},
-      {'name': widget.isBn ? 'যোহর' : 'Dhuhr', 'time': timings['dhuhr'] ?? '11:54 AM', 'icon': Icons.wb_sunny_outlined},
-      {'name': widget.isBn ? 'আসর' : 'Asr', 'time': timings['asr'] ?? '04:18 PM', 'icon': Icons.wb_twilight_outlined},
-      {'name': widget.isBn ? 'মাগরিব' : 'Maghrib', 'time': timings['maghrib'] ?? '05:56 PM', 'icon': Icons.wb_twilight},
-      {'name': widget.isBn ? 'এশা' : 'Isha', 'time': timings['isha'] ?? '07:09 PM', 'icon': Icons.bedtime_outlined},
+      {'name': widget.isBn ? 'ফজর' : 'Fajr', 'time': timings['fajr'] ?? '--', 'icon': Icons.nights_stay_outlined},
+      {'name': widget.isBn ? 'যোহর' : 'Dhuhr', 'time': timings['dhuhr'] ?? '--', 'icon': Icons.wb_sunny_outlined},
+      {'name': widget.isBn ? 'আসর' : 'Asr', 'time': timings['asr'] ?? '--', 'icon': Icons.wb_twilight_outlined},
+      {'name': widget.isBn ? 'মাগরিব' : 'Maghrib', 'time': timings['maghrib'] ?? '--', 'icon': Icons.wb_twilight},
+      {'name': widget.isBn ? 'এশা' : 'Isha', 'time': timings['isha'] ?? '--', 'icon': Icons.bedtime_outlined},
     ];
 
     return Container(
@@ -408,7 +416,8 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      Expanded(
+                        child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
@@ -419,11 +428,14 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                             child: const Icon(Icons.access_time_filled, color: Color(0xFF34D399), size: 18),
                           ),
                           const SizedBox(width: 10),
-                          Column(
+                          Expanded(
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 widget.isBn ? 'পরবর্তী ওয়াক্ত: $nextPrayer' : 'Next Prayer: $nextPrayer',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
@@ -440,8 +452,11 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                               ),
                             ],
                           ),
+                          ),
                         ],
                       ),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -449,7 +464,7 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'বাকি ${_formatCountdown(_countdownSeconds)}',
+                          widget.isBn ? 'বাকি ${_formatCountdown(_countdownSeconds)}' : '${_formatCountdown(_countdownSeconds)} left',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,

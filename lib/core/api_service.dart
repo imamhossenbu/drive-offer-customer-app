@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'auth_storage.dart';
+import 'etag_http.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -14,6 +15,18 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// User-facing error text. Server-provided [ApiException] messages are shown
+/// as-is; anything else (SocketException, TimeoutException, parse errors…) is
+/// replaced by a generic message instead of leaking raw exception text.
+String friendlyError(Object e, {bool isBn = true}) {
+  if (e is ApiException && e.statusCode != null && e.statusCode! < 500 && e.message.trim().isNotEmpty) {
+    return e.message;
+  }
+  return isBn
+      ? 'কিছু একটা সমস্যা হয়েছে। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+      : 'Something went wrong. Check your connection and try again.';
 }
 
 class CustomerApiService {
@@ -259,7 +272,7 @@ class CustomerApiService {
   }
 
   Future<Map<String, dynamic>> getPin() async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/users/me/pin'),
       headers: _headers(),
     );
@@ -298,7 +311,7 @@ class CustomerApiService {
   // ── 2. Profile & KYC ─────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getMe() async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/users/me'),
       headers: _headers(),
     );
@@ -352,7 +365,7 @@ class CustomerApiService {
       if (category != null && category != 'ALL') params['category'] = category;
 
       final uri = Uri.parse('$_baseUrl/drive-offers').replace(queryParameters: params);
-      final res = await http.get(uri, headers: _headers());
+      final res = await etagGet(uri, headers: _headers());
       last = _parse(res);
 
       final data = last['data'];
@@ -379,12 +392,12 @@ class CustomerApiService {
     if (category != null && category != 'ALL') params['category'] = category;
 
     final uri = Uri.parse('$_baseUrl/offers').replace(queryParameters: params.isEmpty ? null : params);
-    final res = await http.get(uri, headers: _headers());
+    final res = await etagGet(uri, headers: _headers());
     return _parse(res);
   }
 
   Future<Map<String, dynamic>> getOperators() async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/operators'),
       headers: _headers(),
     );
@@ -413,7 +426,7 @@ class CustomerApiService {
   }
 
   Future<Map<String, dynamic>> getOrders({int page = 1, int limit = 20}) async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/orders?page=$page&limit=$limit'),
       headers: _headers(),
     );
@@ -423,7 +436,7 @@ class CustomerApiService {
   // ── 5. Wallet & Add Money (Top-Up) ───────────────────────────────────────
 
   Future<Map<String, dynamic>> getPaymentMethods() async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/payment-methods'),
       headers: _headers(),
     );
@@ -432,7 +445,7 @@ class CustomerApiService {
 
   Future<Map<String, dynamic>> getSettings() async {
     try {
-      final res = await http.get(
+      final res = await etagGet(
         Uri.parse('$_baseUrl/settings/public'),
         headers: _headers(withAuth: false),
       );
@@ -441,7 +454,7 @@ class CustomerApiService {
       }
     } catch (_) {}
 
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/settings'),
       headers: _headers(withAuth: false),
     );
@@ -485,7 +498,7 @@ class CustomerApiService {
   }
 
   Future<Map<String, dynamic>> getTopUps({int page = 1, int limit = 50}) async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/wallet/topups?page=$page&limit=$limit'),
       headers: _headers(),
     );
@@ -493,7 +506,7 @@ class CustomerApiService {
   }
 
   Future<Map<String, dynamic>> getWalletTransactions({int page = 1, int limit = 20}) async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/wallet/transactions?page=$page&limit=$limit'),
       headers: _headers(),
     );
@@ -503,7 +516,7 @@ class CustomerApiService {
   // ── 6. Notifications ─────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getNotifications() async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/notifications'),
       headers: _headers(),
     );
@@ -527,12 +540,12 @@ class CustomerApiService {
     if (lng != null) params['lng'] = lng.toString();
 
     final uri = Uri.parse('$_baseUrl/prayer-times').replace(queryParameters: params.isEmpty ? null : params);
-    final res = await http.get(uri, headers: _headers(withAuth: false));
+    final res = await etagGet(uri, headers: _headers(withAuth: false));
     return _parse(res);
   }
 
   Future<Map<String, dynamic>> getPrayerDistricts() async {
-    final res = await http.get(
+    final res = await etagGet(
       Uri.parse('$_baseUrl/prayer-times/districts'),
       headers: _headers(withAuth: false),
     );

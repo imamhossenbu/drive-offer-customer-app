@@ -102,8 +102,8 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
     if (app.walletBalance < offerPrice) {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Insufficient balance! Please Add Money first.'),
+        SnackBar(
+          content: Text(app.isBn ? 'পর্যাপ্ত ব্যালেন্স নেই! আগে ব্যালেন্স যোগ করুন।' : 'Insufficient balance! Please Add Money first.'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -122,7 +122,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
       );
 
       final data = res['data'] ?? res;
-      final orderId = data['id']?.toString() ?? data['orderId']?.toString() ?? 'SUCCESS';
+      final orderId = data['id']?.toString() ?? data['orderId']?.toString() ?? '';
 
       if (!mounted) return;
       await app.fetchMe();
@@ -139,7 +139,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
       SoundService.playError();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(friendlyError(e, isBn: app.isBn)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -176,6 +176,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 12),
+            if (orderId.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -183,7 +184,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Order ID: $orderId',
+                '${ctx.read<AppState>().isBn ? 'অর্ডার আইডি' : 'Order ID'}: $orderId',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.primary),
               ),
             ),
@@ -297,12 +298,12 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '৳${finalPrice.toStringAsFixed(0)}',
+                        app.formatCurrency(finalPrice),
                         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary),
                       ),
                       if (offer.discountPrice > 0 && offer.discountPrice < offer.price)
                         Text(
-                          '৳${offer.price.toStringAsFixed(0)}',
+                          app.formatCurrency(offer.price),
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade500,
@@ -328,29 +329,36 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          hasEnoughBalance ? Icons.account_balance_wallet : Icons.warning_amber_rounded,
-                          size: 20,
-                          color: hasEnoughBalance ? AppColors.success : AppColors.error,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          app.isBn ? 'বর্তমান ব্যালেন্স:' : 'Your Balance:',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '৳${app.walletBalance.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            hasEnoughBalance ? Icons.account_balance_wallet : Icons.warning_amber_rounded,
+                            size: 20,
                             color: hasEnoughBalance ? AppColors.success : AppColors.error,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              app.isBn ? 'বর্তমান ব্যালেন্স:' : 'Your Balance:',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            app.formatCurrency(app.walletBalance),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: hasEnoughBalance ? AppColors.success : AppColors.error,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    if (!hasEnoughBalance) const SizedBox(width: 8),
                     if (!hasEnoughBalance)
                       InkWell(
                         onTap: () {
@@ -457,6 +465,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                   hintText: '••••',
                   prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary),
                   suffixIcon: IconButton(
+                    tooltip: _obscurePin ? (app.isBn ? 'পিন দেখুন' : 'Show PIN') : (app.isBn ? 'পিন লুকান' : 'Hide PIN'),
                     icon: Icon(_obscurePin ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
                     onPressed: () => setState(() => _obscurePin = !_obscurePin),
                   ),
@@ -491,7 +500,7 @@ class _OfferDetailSheetState extends State<OfferDetailSheet> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : Text(
-                          app.isBn ? 'অফারটি কিনুন (৳${finalPrice.toStringAsFixed(0)})' : 'Confirm Purchase (৳${finalPrice.toStringAsFixed(0)})',
+                          app.isBn ? 'অফারটি কিনুন (${app.formatCurrency(finalPrice)})' : 'Confirm Purchase (${app.formatCurrency(finalPrice)})',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                 ),
