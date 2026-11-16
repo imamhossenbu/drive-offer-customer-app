@@ -1,13 +1,13 @@
 {
   "apiBaseUrl": "https://alokito-telecom-backend-7coy.onrender.com/api/v1",
   "customer": {
-    "latestVersion": "1.1.0",
-    "buildNumber": 11,
+    "latestVersion": "1.1.1",
+    "buildNumber": 12,
     "downloadUrl": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-customer.apk",
     "downloadUrlV7a": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-customer-v7a.apk",
     "sizeMb": 21,
     "forceUpdate": false,
-    "releaseNotes": "দাম দেখানোর সমস্যা সমাধান, রিফান্ড ও অর্ডার এডিট ঠিক করা হয়েছে, কম ডেটা খরচ, নিরাপত্তা ও ডিজাইন উন্নতি।"
+    "releaseNotes": "নতুন সার্ভারে স্থানান্তর ও স্থিতিশীলতা উন্নতি।"
   },
   "admin": {
     "latestVersion": "1.1.1",
