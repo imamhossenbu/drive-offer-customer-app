@@ -5,24 +5,24 @@
     "buildNumber": 11,
     "downloadUrl": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-customer.apk",
     "downloadUrlV7a": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-customer-v7a.apk",
-    "sizeMb": 20,
+    "sizeMb": 21,
     "forceUpdate": false,
-    "releaseNotes": "দাম দেখানোর সমস্যা সমাধান, দ্রুত ও কম ডেটা খরচ, নতুন ডিজাইন উন্নতি।"
+    "releaseNotes": "দাম দেখানোর সমস্যা সমাধান, রিফান্ড ও অর্ডার এডিট ঠিক করা হয়েছে, কম ডেটা খরচ, নিরাপত্তা ও ডিজাইন উন্নতি।"
   },
   "admin": {
     "latestVersion": "1.1.0",
     "buildNumber": 11,
     "downloadUrl": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-admin.apk",
     "downloadUrlV7a": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-admin-v7a.apk",
-    "sizeMb": 21,
+    "sizeMb": 22,
     "forceUpdate": false,
-    "releaseNotes": "রিফান্ড ও অর্ডার এডিট ঠিক করা হয়েছে, নিরাপত্তা উন্নতি, নতুন আপডেট স্ক্রিন।"
+    "releaseNotes": "দাম দেখানোর সমস্যা সমাধান, রিফান্ড ও অর্ডার এডিট ঠিক করা হয়েছে, কম ডেটা খরচ, নিরাপত্তা ও ডিজাইন উন্নতি।"
   },
   "listener": {
     "latestVersion": "1.0.3",
     "downloadUrl": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/driver-sms-listener.apk",
     "downloadUrlV7a": "https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/driver-sms-listener-v7a.apk",
-    "sizeMb": 29
+    "sizeMb": 30
   },
   "support": {
     "whatsapp": "",
