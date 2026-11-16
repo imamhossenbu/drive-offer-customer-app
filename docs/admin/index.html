@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>আলোকিত টেলিকম অ্যাপস</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0D5E36">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <img class="logo" src="../logo.png" alt="আলোকিত টেলিকম লোগো" width="88" height="88">
+      <h1>আলোকিত টেলিকম অ্যাপস</h1>
+      <p>অ্যাডমিন, গ্রাহক ও SMS লিসেনার অ্যাপ এক জায়গায়</p>
+    </header>
+
+    <div class="share">
+      <code id="customer-link">https://imamhossenbu.github.io/drive-offer-customer-app/</code>
+      <button class="btn" type="button"
+              onclick="copyText(document.getElementById('customer-link').textContent, this)">
+        গ্রাহক লিংক কপি
+      </button>
+    </div>
+
+    <!-- Admin -->
+    <section class="card">
+      <div class="app-head">
+        <div class="app-icon">🛡️</div>
+        <div>
+          <h2>অ্যাডমিন অ্যাপ</h2>
+          <div class="meta">
+            <span data-app="admin" data-field="version">ভার্সন ১.১.০</span> ·
+            <span data-app="admin" data-field="size">২১ MB</span>
+          </div>
+        </div>
+      </div>
+      <p class="desc">অর্ডার প্রসেস, অফার ও ইউজার ম্যানেজমেন্ট, রিফান্ড এবং নতুন অর্ডারের অ্যালার্ট।</p>
+      <p class="notes" data-app="admin" data-field="notes"></p>
+      <a class="btn" data-app="admin" data-field="downloadUrl"
+         href="https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-admin.apk">
+        ⬇️ অ্যাডমিন অ্যাপ ডাউনলোড
+      </a>
+      <a class="btn secondary" data-app="admin" data-field="downloadUrlV7a"
+         href="https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-admin-v7a.apk">
+        পুরোনো ফোনের জন্য (v7a)
+      </a>
+    </section>
+
+    <!-- Customer -->
+    <section class="card">
+      <div class="app-head">
+        <div class="app-icon"><img src="../logo.png" alt=""></div>
+        <div>
+          <h2>গ্রাহক অ্যাপ</h2>
+          <div class="meta">
+            <span data-app="customer" data-field="version">ভার্সন ১.১.০</span> ·
+            <span data-app="customer" data-field="size">২০ MB</span>
+          </div>
+        </div>
+      </div>
+      <p class="desc">গ্রাহকদের অফার কেনা, ব্যালেন্স যোগ ও অর্ডার দেখার অ্যাপ।</p>
+      <a class="btn" data-app="customer" data-field="downloadUrl"
+         href="https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-customer.apk">
+        ⬇️ গ্রাহক অ্যাপ ডাউনলোড
+      </a>
+      <a class="btn secondary" data-app="customer" data-field="downloadUrlV7a"
+         href="https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/drive-offer-customer-v7a.apk">
+        পুরোনো ফোনের জন্য (v7a)
+      </a>
+    </section>
+
+    <!-- SMS Listener -->
+    <section class="card">
+      <div class="app-head">
+        <div class="app-icon">📩</div>
+        <div>
+          <h2>SMS লিসেনার অ্যাপ</h2>
+          <div class="meta">
+            <span data-app="listener" data-field="version">ভার্সন ১.০.৩</span> ·
+            <span data-app="listener" data-field="size">২৯ MB</span>
+          </div>
+        </div>
+      </div>
+      <p class="desc">পেমেন্ট ফোনে চালু রাখুন। বিকাশ, নগদ ও রকেটের SMS পড়ে পেমেন্ট নিজে থেকে যাচাই করে।</p>
+      <a class="btn" data-app="listener" data-field="downloadUrl"
+         href="https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/driver-sms-listener.apk">
+        ⬇️ SMS লিসেনার ডাউনলোড
+      </a>
+      <a class="btn secondary" data-app="listener" data-field="downloadUrlV7a"
+         href="https://github.com/imamhossenbu/drive-offer-customer-app/releases/download/v1.1.0/driver-sms-listener-v7a.apk">
+        পুরোনো ফোনের জন্য (v7a)
+      </a>
+    </section>
+
+    <footer>শুধু টিমের জন্য। এই পেজের লিংক গ্রাহকদের দেবেন না।</footer>
+  </main>
+  <script src="../config.js"></script>
+</body>
+</html>
