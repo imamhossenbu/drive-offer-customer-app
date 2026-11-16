@@ -1,5 +1,5 @@
 {
-  "apiBaseUrl": "https://alokito-telecom-backend-sqgt.onrender.com/api/v1",
+  "apiBaseUrl": "https://alokito-telecom-backend-7coy.onrender.com/api/v1",
   "customer": {
     "latestVersion": "1.1.0",
     "buildNumber": 11,
