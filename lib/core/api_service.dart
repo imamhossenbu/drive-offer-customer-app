@@ -24,6 +24,12 @@ String friendlyError(Object e, {bool isBn = true}) {
   if (e is ApiException && e.statusCode != null && e.statusCode! < 500 && e.message.trim().isNotEmpty) {
     return e.message;
   }
+  if (e is ApiException && (e.statusCode ?? 0) >= 500) {
+    // Server reachable but failing / suspended — not the user's internet.
+    return isBn
+        ? 'সার্ভারে সাময়িক সমস্যা হচ্ছে। কিছুক্ষণ পর আবার চেষ্টা করুন।'
+        : 'The server is temporarily unavailable. Please try again later.';
+  }
   return isBn
       ? 'কিছু একটা সমস্যা হয়েছে। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
       : 'Something went wrong. Check your connection and try again.';
@@ -73,7 +79,8 @@ class CustomerApiService {
       msg ??= 'Request failed (${res.statusCode})';
       throw ApiException(msg, statusCode: res.statusCode, code: code);
     } on FormatException {
-      throw ApiException('Server returned an unexpected response format', statusCode: res.statusCode);
+      // Non-JSON body (e.g. hosting provider's HTML error page when the server is down).
+      throw ApiException('সার্ভারে সাময়িক সমস্যা হচ্ছে। কিছুক্ষণ পর আবার চেষ্টা করুন। (${res.statusCode})', statusCode: res.statusCode);
     }
   }
 

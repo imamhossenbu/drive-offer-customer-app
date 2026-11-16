@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.message;
+          _error = friendlyError(e, isBn: context.read<AppState>().isBn);
           _loading = false;
         });
       }
